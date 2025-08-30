@@ -7,46 +7,65 @@ var taskManager = require('task.manager');
 var baseUtilities = require('base.utilities');
 
 const WORKFORCE = { fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0};
+const CONSTRUCTION = { container: 0, extension: 0 }
 
 module.exports.loop = function () {
     
-    // Clean up the memory of deceased creeps
-    for(var name in Memory.creeps) {
-        if(!Game.creeps[name]) {
-            delete Memory.creeps[name];
-            console.log('Clearing non-existing creep memory:', name);
-        }
-    }
+    baseUtilities.cleanUpCreepMemory();
 
-    // Count the current creeps
+    // Perform per-room actions
     for (const roomName in Game.rooms) {
-        const myRoom = Game.rooms[roomName];
+        const thisRoom = Game.rooms[roomName];
+        
+        taskManager.prepare(thisRoom);
       
-        taskManager.prepare(myRoom);
-      
-        const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === myRoom.name), c => c.memory.role);
-        const rcl = myRoom.controller.level || 0;
-        if (rcl >= 2) {
+        // Manage base by level
+        const roomControllerLevel = thisRoom.controller.level || 0;
+        if (roomControllerLevel == 2) {
             WORKFORCE.worker = 3;
             WORKFORCE.fastworker = 2;
         }
 
-
-        // Manage the workers
+        // Manage the worker Counts
+        const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
         for (const role of Object.keys(WORKFORCE)) {
             const need = WORKFORCE[role];
             const have = counts[role] || 0;
 
-            if (myRoom.energyAvailable < 200) break; // cost of [W,C,M]
+            if (thisRoom.energyAvailable < 200) break;
             
             if (have < need) {
-                makeCreep.run(myRoom, role);
+                makeCreep.run(thisRoom, role);
                 break;
             }
         }
-    
-        const vis = new RoomVisual(myRoom.name);
+
+        // Manage the base
+        var roomController = thisRoom.controller && thisRoom.controller.level || 0;
+        const MAX_CONSTRUCTION_SITES = 1;
+        const activeConstructions = thisRoom.find(FIND_CONSTRUCTION_SITES).length;
+
+        CONSTRUCTION.extension  = (CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][roomController.level] || 0);
+
+        if (roomControllerLevel == 2) {
+            // The max number of containers that we want is one per energy source and one for the spawn
+            var sourceCount = thisRoom.find(FIND_SOURCES).length;
+            var maxAllowedThisLevel = (CONTROLLER_STRUCTURES[STRUCTURE_CONTAINER][roomController.level] || 0);
+            CONSTRUCTION.container = Math.min(sourceCount +1, maxAllowedThisLevel);
+        }
         
+        if (activeConstructions < MAX_CONSTRUCTION_SITES) {
+            console.log('Open construction site, finding something to build');
+            // Let's build something!
+            var newConstruction = baseUtilities.autoPlanContainers(thisRoom);
+            
+            if (!newConstruction) baseUtilities.autoPlanExtensions(thisRoom);
+        }
+
+        // Set the GUI Overlay for the room    
+        const vis = new RoomVisual(thisRoom.name);
+
+        // ----- Display Worker Counts ----- //        
         vis.rect(1, 10, 8.5, (Object.keys(WORKFORCE).length + 1.1), {fill: '#000', opacity: 0.3, stroke: '#fff'});
         vis.text(`Workers`, 1.2, 11, {align: 'left', font: 0.9});
         
@@ -63,22 +82,28 @@ module.exports.loop = function () {
         
             y += 0.9;
         }
-        
-        // Manage the base
-        const MAX_ACTIVE_EXT_SITES = 1;
-        const active = myRoom.find(FIND_CONSTRUCTION_SITES, {filter:s=>s.structureType===STRUCTURE_EXTENSION}).length;
-        if (active < MAX_ACTIVE_EXT_SITES) baseUtilities.autoPlanExtensions(myRoom); // place at most one
 
+        // Add Overlay to spawner
+        var roomSpawns = thisRoom.find(FIND_MY_SPAWNS)
+        for (var i = 0; i < roomSpawns.length; i++) {
+            var thisSpawn = roomSpawns[i];
+            if (!thisSpawn.spawning) continue;
+            
+            var spawning = thisSpawn.spawning;
+            var timeNeeded = spawning.needTime | 0;
+            var timeRemaining = spawning.remainingTime | 0;
+            var spawnPercent = timeNeeded ? Math.floor((timeNeeded - timeRemaining) * 100 / timeNeeded) : 0;
+            var spawnName = spawning.name;
+            var spawnRole = (Memory.creeps[spawnName] && Memory.creeps[spawnName].role) || 'creep';
+
+            thisSpawn.room.visual.text(
+                '🛠' + spawnRole + ' ' + spawnPercent + '%',
+                thisSpawn.pos.x + 1, thisSpawn.pos.y - 0.25,
+                { align: 'left', opacity: 0.8, font: 0.8 }
+            );
+        }
     }
 
-    if(Game.spawns['Spawn1'].spawning) {
-        var spawningCreep = Game.creeps[Game.spawns['Spawn1'].spawning.name];
-        Game.spawns['Spawn1'].room.visual.text(
-            '🛠️' + spawningCreep.memory.role,
-            Game.spawns['Spawn1'].pos.x + 1,
-            Game.spawns['Spawn1'].pos.y,
-            {align: 'left', opacity: 0.8});
-    }
 
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
@@ -92,6 +117,7 @@ module.exports.loop = function () {
         }
     }
     
+    // ----- Console Commands ----- //
     // Use the peek() console command to look at the current task list
     if (!global.peek) {
       global.peek = function (role, roomName) {
@@ -129,6 +155,23 @@ module.exports.loop = function () {
         });
       };
     }
-
+    
+    if (!global.dropContainer) {
+      global.dropContainer = function(roomName, sourceIndex) {
+        var room = Game.rooms[roomName]; if (!room) return console.log('no room');
+        var src = room.find(FIND_SOURCES)[sourceIndex||0]; if (!src) return console.log('no source');
+        var terrain = room.getTerrain(), x=src.pos.x, y=src.pos.y, xx, yy, rc;
+        for (var dx=-1; dx<=1; dx++) for (var dy=-1; dy<=1; dy++) {
+          if (!dx && !dy) continue; xx=x+dx; yy=y+dy;
+          if (xx<1||xx>48||yy<1||yy>48) continue;
+          if (terrain.get(xx,yy)===TERRAIN_MASK_WALL) continue;
+          if (room.lookForAt(LOOK_STRUCTURES,xx,yy).length) continue;
+          if (room.lookForAt(LOOK_CONSTRUCTION_SITES,xx,yy).length) continue;
+          rc = room.createConstructionSite(xx,yy,STRUCTURE_CONTAINER);
+          console.log('container @',xx,yy,'->',rc); return rc;
+        }
+        console.log('no open adjacent tile');
+      };
+    }
 
 }
