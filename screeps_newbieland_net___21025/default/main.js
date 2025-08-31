@@ -2,11 +2,12 @@ var roleBuilder = require('role.builder');
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
 var roleWorker = require('role.worker');
+var roleMiner = require('role.miner');
 var makeCreep = require('make.creep');
 var taskManager = require('task.manager');
 var baseUtilities = require('base.utilities');
 
-const WORKFORCE = { fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0};
+const WORKFORCE = { fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0, miner: 0};
 const CONSTRUCTION = { container: 0, extension: 0 }
 
 module.exports.loop = function () {
@@ -41,25 +42,59 @@ module.exports.loop = function () {
         }
 
         // Manage the base
-        var roomController = thisRoom.controller && thisRoom.controller.level || 0;
-        const MAX_CONSTRUCTION_SITES = 1;
+        var roomController = thisRoom.controller;
+        var MAX_CONSTRUCTION_SITES = 0;
         const activeConstructions = thisRoom.find(FIND_CONSTRUCTION_SITES).length;
 
         CONSTRUCTION.extension  = (CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][roomController.level] || 0);
 
+        var containersBuilt = thisRoom.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_CONTAINER; }}).length;
+        var containersQueued = thisRoom.find(FIND_CONSTRUCTION_SITES, {filter: function(s){ return s.structureType === STRUCTURE_CONTAINER; }}).length;
+        var containerCount = containersBuilt + containersQueued;        
+
+        var extensionsBuilt = thisRoom.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
+        var extensionsQueued = thisRoom.find(FIND_CONSTRUCTION_SITES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
+        var extensionCount = extensionsBuilt + extensionsQueued;        
+
+
         if (roomControllerLevel == 2) {
+        //    console.log('Room level 2');
             // The max number of containers that we want is one per energy source and one for the spawn
             var sourceCount = thisRoom.find(FIND_SOURCES).length;
-            var maxAllowedThisLevel = (CONTROLLER_STRUCTURES[STRUCTURE_CONTAINER][roomController.level] || 0);
-            CONSTRUCTION.container = Math.min(sourceCount +1, maxAllowedThisLevel);
+            var containersAllowedThisLevel = (CONTROLLER_STRUCTURES[STRUCTURE_CONTAINER][roomController.level] || 0);
+            var extensionsAllowedThisLevel = (CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][roomController.level] || 0);
+            MAX_CONSTRUCTION_SITES = 1;
+            
+//            console.log('Room controller level: ' + roomController.level);
+//            console.log('extensions allowed: ' + extensionsAllowedThisLevel);
+            if (extensionCount < extensionsAllowedThisLevel) {
+                CONSTRUCTION.container = 1
+            } else {
+//                console.log('setting containers to max');
+                CONSTRUCTION.container = Math.min(sourceCount +1, containersAllowedThisLevel);
+            }
+        }
+        
+        if (containerCount == CONSTRUCTION.container && extensionCount == CONSTRUCTION.extension) {
+            MAX_CONSTRUCTION_SITES = 0;
         }
         
         if (activeConstructions < MAX_CONSTRUCTION_SITES) {
-            console.log('Open construction site, finding something to build');
+//            console.log('Open construction site, finding something to build');
+//            console.log('Containers:' + containerCount + '/' + CONSTRUCTION.container);
+//            console.log('Extensions:' + extensionCount + '/' + CONSTRUCTION.extension);
             // Let's build something!
-            var newConstruction = baseUtilities.autoPlanContainers(thisRoom);
+            var newConstruction = null;
+
+            if (!newConstruction && containerCount < CONSTRUCTION.container) {
+                newConstruction = baseUtilities.autoPlanContainers(thisRoom);
+//                console.log('Started construction on container. Set newConstruction to: ' + newConstruction);
+            }
             
-            if (!newConstruction) baseUtilities.autoPlanExtensions(thisRoom);
+            if (!newConstruction && extensionCount < CONSTRUCTION.extension) {
+                baseUtilities.autoPlanExtensions(thisRoom);
+//                console.log('Started construction on extension. Set newConstruction to: ' + newConstruction);
+            }
         }
 
         // Set the GUI Overlay for the room    
@@ -114,6 +149,7 @@ module.exports.loop = function () {
             case 'harvester': roleHarvester.run(creep); break;
             case 'upgrader': roleUpgrader.run(creep); break;
             case 'builder': roleBuilder.run(creep); break;
+            case 'miner': roleMiner.run(creep); break;
         }
     }
     
