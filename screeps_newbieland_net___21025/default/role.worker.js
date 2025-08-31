@@ -9,22 +9,56 @@
  var taskManager = require('task.manager');
 
 function harvestNearest(creep) {
-    // Reuse the last source if it's still exists and is active
-    let useSource = creep.memory.energySource && Game.getObjectById(creep.memory.energySource);
-    
-    if (!useSource || useSource.energy === 0) {
-        useSource = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-        creep.memory.energySource = useSource && useSource.id;
+  // reuse last target
+  let harvestObject = creep.memory.energySource && Game.getObjectById(creep.memory.energySource);
+
+  var isContainer = harvestObject && harvestObject.structureType === STRUCTURE_CONTAINER;
+  var isSource    = harvestObject && !harvestObject.structureType && harvestObject.energy !== undefined && harvestObject.ticksToRegeneration !== undefined;
+  var isDropped   = harvestObject && harvestObject.resourceType === RESOURCE_ENERGY;
+  var harvestResult = null;
+
+  if (!harvestObject) {
+    var capacity = Math.min(creep.store.getCapacity(RESOURCE_ENERGY), 150);
+
+    var newContainer = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+      filter: function(s){ return s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= capacity; }
+    });
+
+    var newDrop = null, newSource = null;
+    if (!newContainer) {
+      newDrop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+        filter: function(r){ return r.resourceType === RESOURCE_ENERGY && r.amount >= 100; }
+      });
     }
-    
-    if (!useSource) return; // Nothing to harvest
-    const harvestResult = creep.harvest(useSource);
-    
-    if (harvestResult === ERR_NOT_IN_RANGE) {
-        creep.moveTo(useSource, {reusePath: 3, visualizePathStyle: {stroke: '#ffffff'}});
-    } else if (harvestResult === ERR_INVALID_TARGET) {
-        creep.memory.energySource = null;
+    if (!newContainer && !newDrop) {
+      newSource = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
     }
+
+    harvestObject = newContainer || newDrop || newSource;
+    creep.memory.energySource = harvestObject ? harvestObject.id : null;
+
+    isContainer = harvestObject && harvestObject.structureType === STRUCTURE_CONTAINER;
+    isSource    = harvestObject && !harvestObject.structureType && harvestObject.energy !== undefined && harvestObject.ticksToRegeneration !== undefined;
+    isDropped   = harvestObject && harvestObject.resourceType === RESOURCE_ENERGY;
+    if (!harvestObject) return; // nothing to do this tick
+  }
+
+  if (isContainer)      harvestResult = creep.withdraw(harvestObject, RESOURCE_ENERGY);
+  else if (isSource)    harvestResult = creep.harvest(harvestObject);
+  else if (isDropped)   harvestResult = creep.pickup(harvestObject);
+  else { creep.memory.energySource = null; return; }
+
+  if (harvestResult === ERR_NOT_IN_RANGE) {
+    creep.moveTo(harvestObject, { reusePath: 3, visualizePathStyle: { stroke: '#ffff00' } });
+  }
+
+  // optional quick retarget if drained
+  if ((isContainer && harvestObject.store[RESOURCE_ENERGY] === 0) ||
+      (isSource && harvestObject.energy === 0) ||
+      (isDropped && harvestObject.amount === 0)) {
+    var src = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+    creep.memory.energySource = src ? src.id : null;
+  }
 };
 
 function executeTask(creep) {

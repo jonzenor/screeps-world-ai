@@ -75,8 +75,14 @@ function harvestSource(creep) {
     
     var harvestResult = creep.harvest(energySource);
     
+    if (harvestResult == ERR_NOT_ENOUGH_RESOURCES) {
+        creep.memory.sleep = Game.time + (energySource.ticksToRegeneration) || 10;
+        return;
+    }
+    
     if (harvestResult == ERR_NOT_IN_RANGE) {
-        console.log('ERROR - Miner should be near it\'s source!' + creep.name + ' : ' + energySource);
+        energySource = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+        creep.memory.energySource = energySource && energySource.id;
     }
     
     return OK;
@@ -108,6 +114,10 @@ function fillContainer(creep, container) {
 
 module.exports = {
     run(creep) {
+        if (creep.memory.sleep <= Game.time) {
+            return;
+        }
+        
         var ownedContainer = null;
         if (hasValidContainer(creep)) {
             ownedContainer = Game.getObjectById(creep.memory.assignedContainer);
@@ -120,8 +130,18 @@ module.exports = {
             return OK;
         }
         
-        harvestSource(creep);
-        repairContainer(creep, ownedContainer);
-        fillContainer(creep, ownedContainer);
+        if (ownedContainer && ownedContainer.progress !== undefined) {
+            harvestSource(creep);
+            creep.build(ownedContainer);
+        } else {
+            if (ownedContainer.store.getFreeCapacity(RESOURCE_ENERGY) < 50) {
+                creep.memory.sleep = Game.time + 5;
+                return;
+            }
+            
+            harvestSource(creep);
+            repairContainer(creep, ownedContainer);
+            fillContainer(creep, ownedContainer);
+        }
     }
 };

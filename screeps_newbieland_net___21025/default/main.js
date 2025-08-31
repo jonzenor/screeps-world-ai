@@ -37,11 +37,11 @@ module.exports.loop = function () {
 
         var containersBuilt = thisRoom.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_CONTAINER; }}).length;
         var containersQueued = thisRoom.find(FIND_CONSTRUCTION_SITES, {filter: function(s){ return s.structureType === STRUCTURE_CONTAINER; }}).length;
-        var containerCount = containersBuilt + containersQueued;        
+        var containerCount = containersBuilt + containersQueued;
 
         var extensionsBuilt = thisRoom.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
         var extensionsQueued = thisRoom.find(FIND_CONSTRUCTION_SITES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
-        var extensionCount = extensionsBuilt + extensionsQueued;        
+        var extensionCount = extensionsBuilt + extensionsQueued;
 
 
         if (roomControllerLevel == 2) {
@@ -86,6 +86,9 @@ module.exports.loop = function () {
         
         // Manage the worker Counts
         WORKFORCE.miner = containerCount;
+        if (WORKFORCE.miner > 2) {
+            WORKFORCE.worker = 2;
+        }
         const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
         for (const role of Object.keys(WORKFORCE)) {
             const need = WORKFORCE[role];
