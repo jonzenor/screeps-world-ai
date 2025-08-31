@@ -16,9 +16,9 @@ function bodyFor(role, room) {
       if (cap >= 550) return [WORK, WORK, CARRY, MOVE, MOVE, MOVE];              // 500
       return [WORK, CARRY, MOVE, MOVE];                                           // 250
 
-    case 'miner':         // parks on source
-      if (cap >= 550) return [WORK, WORK, WORK, WORK, WORK, MOVE];               // 550
-      return [WORK, WORK, MOVE];                                                 // 250
+    case 'miner':
+      if (cap >= 550) return [WORK, WORK, WORK, WORK, CARRY, MOVE];
+      return [WORK, WORK, CARRY, MOVE];
 
     case 'hauler':        // ferry between containers/structures
       if (cap >= 550) return [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE]; // 450

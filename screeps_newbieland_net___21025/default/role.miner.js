@@ -39,7 +39,6 @@ function findEnergySourceContainer(creep) {
         }
     }
     
-    
     return null;
 }
 
@@ -66,6 +65,47 @@ function moveToContainer(creep, container) {
     return creep.moveTo(container.pos, {reusePath: 5, visualizePathStyle: {stroke: '#ffffff'}});
 }
 
+function harvestSource(creep) {
+    var energySource = creep.memory.assignedSource;
+    
+    if (!energySource) {
+        energySource = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+        creep.memory.energySource = energySource && energySource.id;
+    }
+    
+    var harvestResult = creep.harvest(energySource);
+    
+    if (harvestResult == ERR_NOT_IN_RANGE) {
+        console.log('ERROR - Miner should be near it\'s source!' + creep.name + ' : ' + energySource);
+    }
+    
+    return OK;
+}
+
+function repairContainer(creep, ownedContainer) {
+    if (!ownedContainer) {
+        return ERR_NOT_FOUND;
+    }
+
+    var containerHealth = ownedContainer.hits / ownedContainer.hitsMax;
+    
+    if (creep.memory.repairingContainer) {
+        creep.repair(ownedContainer);
+        
+        if (containerHealth > 0.99) {
+            creep.memory.repairingContainer = false;
+        }
+    } else {
+        if (containerHealth <= 0.75) {
+            creep.memory.repairingContainer = true;
+        }
+    }
+}
+
+function fillContainer(creep, container) {
+    creep.transfer(container, RESOURCE_ENERGY);
+}
+
 module.exports = {
     run(creep) {
         var ownedContainer = null;
@@ -75,6 +115,13 @@ module.exports = {
             ownedContainer = findEnergySourceContainer(creep);
         }
         
-        moveToContainer(creep, ownedContainer);
+        if (!creep.pos.isEqualTo(ownedContainer.pos)) {
+            moveToContainer(creep, ownedContainer);
+            return OK;
+        }
+        
+        harvestSource(creep);
+        repairContainer(creep, ownedContainer);
+        fillContainer(creep, ownedContainer);
     }
 };
