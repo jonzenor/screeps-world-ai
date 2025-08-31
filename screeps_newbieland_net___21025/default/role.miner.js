@@ -9,36 +9,72 @@
  var baseUtilities = require('base.utilities');
 
 function findEnergySourceContainer(creep) {
-    // Find all sources
-    var containers = creep.room.find(FIND_MY_STRUCTURES, {filter: s => s.structureType === STRUCTURE_CONTAINER});
-    roomMemory = Memory.rooms[creep.room.name];
+    var room = creep.room;
     
+    // Find all sources
+    var roomMemory = Memory.rooms[room.name];
+    var claims = roomMemory.container || (roomMemory.container = {});
+    
+    var containers = room.find(FIND_STRUCTURES, {filter: s => s.structureType === STRUCTURE_CONTAINER});
     for (var i = 0; i < containers.length; i++) {
         var thisContainer = containers[i];
         
-        
-    }
-    
-    var sources = creep.room.find(FIND_SOURCES);
-    
-    for (var i = 0; i < sources.length; i++) {
-        var thisSource = sources[i];
-        
-        if (baseUtilities.hasContainerNearSource(creep.room, thisSource)) {
-            // See if this container is available
-            var available = baseUtilities.containerAvailableForMiner(creep.room, this)
+        var minerName = claims[thisContainer.id];
+        if (!minerName || !Game.creeps[minerName]) {
+            claims[thisContainer.id] = creep.name;
+            creep.memory.assignedContainer = thisContainer.id;
+            return thisContainer;
         }
-        
-        
     }
     
-    // See if the container has an assigned miner yet
+    var containerConstruction = room.find(FIND_CONSTRUCTION_SITES, {filter: s => s.structureType === STRUCTURE_CONTAINER});
+    for (var i = 0; i < containerConstruction.length; i++) {
+        var thisContainer = containerConstruction[i];
+        
+        var minerName = claims[thisContainer.id];
+        if (!minerName || !Game.creeps[minerName]) {
+            claims[thisContainer.id] = creep.name;
+            creep.memory.assignedContainer = thisContainer.id;
+            return thisContainer;
+        }
+    }
     
-    // Fall back to nearest source
+    
+    return null;
+}
+
+function hasValidContainer(creep) {
+    var containerId = creep.memory.assignedContainer;
+    if (!containerId) return false;
+    
+    var objectExists = Game.getObjectById(containerId);
+    if (!objectExists || objectExists.structureType !== STRUCTURE_CONTAINER) {
+        var roomMemory = Memory.rooms[creep.room.name];
+        
+        delete creep.memory.assignedContainer;
+        delete roomMemory.container[containerId];
+        return false;
+    }
+    return true;
+}
+
+function moveToContainer(creep, container) {
+    if (!container) return ERR_INVALID_TARGET;
+    
+    if (creep.pos.isEqualTo(container.pos)) return OK;
+    
+    return creep.moveTo(container.pos, {reusePath: 5, visualizePathStyle: {stroke: '#ffffff'}});
 }
 
 module.exports = {
     run(creep) {
-        findEnergySourceContainer(creep);
+        var ownedContainer = null;
+        if (hasValidContainer(creep)) {
+            ownedContainer = Game.getObjectById(creep.memory.assignedContainer);
+        } else {
+            ownedContainer = findEnergySourceContainer(creep);
+        }
+        
+        moveToContainer(creep, ownedContainer);
     }
 };

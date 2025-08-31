@@ -27,19 +27,6 @@ module.exports.loop = function () {
             WORKFORCE.fastworker = 2;
         }
 
-        // Manage the worker Counts
-        const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
-        for (const role of Object.keys(WORKFORCE)) {
-            const need = WORKFORCE[role];
-            const have = counts[role] || 0;
-
-            if (thisRoom.energyAvailable < 200) break;
-            
-            if (have < need) {
-                makeCreep.run(thisRoom, role);
-                break;
-            }
-        }
 
         // Manage the base
         var roomController = thisRoom.controller;
@@ -96,6 +83,21 @@ module.exports.loop = function () {
 //                console.log('Started construction on extension. Set newConstruction to: ' + newConstruction);
             }
         }
+        
+        // Manage the worker Counts
+        WORKFORCE.miner = containerCount;
+        const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
+        for (const role of Object.keys(WORKFORCE)) {
+            const need = WORKFORCE[role];
+            const have = counts[role] || 0;
+
+            if (thisRoom.energyAvailable < 200) break;
+            
+            if (have < need) {
+                makeCreep.run(thisRoom, role);
+                break;
+            }
+        }
 
         // Set the GUI Overlay for the room    
         const vis = new RoomVisual(thisRoom.name);
@@ -146,10 +148,10 @@ module.exports.loop = function () {
         switch(creep.memory.role) {
             case 'worker': roleWorker.run(creep); break;
             case 'fastworker': roleWorker.run(creep); break;
+            case 'miner': roleMiner.run(creep); break;
             case 'harvester': roleHarvester.run(creep); break;
             case 'upgrader': roleUpgrader.run(creep); break;
             case 'builder': roleBuilder.run(creep); break;
-            case 'miner': roleMiner.run(creep); break;
         }
     }
     
