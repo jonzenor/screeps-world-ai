@@ -135,6 +135,7 @@ module.exports = {
             creep.build(ownedContainer);
         } else {
             if (ownedContainer.store.getFreeCapacity(RESOURCE_ENERGY) < 50) {
+                repairContainer(creep, ownedContainer);
                 creep.memory.sleep = Game.time + 5;
                 return;
             }

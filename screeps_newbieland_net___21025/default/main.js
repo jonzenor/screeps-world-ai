@@ -7,7 +7,7 @@ var makeCreep = require('make.creep');
 var taskManager = require('task.manager');
 var baseUtilities = require('base.utilities');
 
-const WORKFORCE = { fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0, miner: 0};
+const WORKFORCE = { miner: 0, fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0 };
 const CONSTRUCTION = { container: 0, extension: 0 }
 
 module.exports.loop = function () {
