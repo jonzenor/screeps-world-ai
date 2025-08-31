@@ -55,15 +55,15 @@ function harvestNearest(creep) {
 function findHarvestSource(creep) {
     var capacity = Math.min(creep.store.getCapacity(RESOURCE_ENERGY), 150);
 
-    var newContainer = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-      filter: function(s){ return s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= capacity; }
-    });
-    if (newContainer) return newContainer;
-
     newDrop = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
         filter: function(r){ return r.resourceType === RESOURCE_ENERGY && r.amount >= 100; }
     });
     if (newDrop) return newDrop;
+    
+    var newContainer = creep.pos.findClosestByPath(FIND_STRUCTURES, {
+      filter: function(s){ return s.structureType === STRUCTURE_CONTAINER && s.store[RESOURCE_ENERGY] >= capacity; }
+    });
+    if (newContainer) return newContainer;
 
     newSource = creep.pos.findClosestByPath(FIND_SOURCES);
     if (newSource) return newSource; 

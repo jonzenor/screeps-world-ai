@@ -125,6 +125,11 @@ module.exports = {
             ownedContainer = findEnergySourceContainer(creep);
         }
         
+        if (!ownedContainer) {
+            console.log("ERROR Trying to find a container to manage.");
+            return;
+        }
+        
         if (!creep.pos.isEqualTo(ownedContainer.pos)) {
             moveToContainer(creep, ownedContainer);
             return OK;
