@@ -46,7 +46,7 @@ function harvestNearest(creep) {
     creep.memory.energySource = src ? src.id : null;
   }
   
-  if (isSource && harvestResult == OK) {
+  if (harvestResult == OK) {
       // Reset the source after harvesting so we can attempt to find a more efficient energy source
       creep.memory.energySource = null;
   }

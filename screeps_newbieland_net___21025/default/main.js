@@ -58,7 +58,8 @@ module.exports.loop = function () {
                 CONSTRUCTION.container = 1
             } else {
 //                console.log('setting containers to max');
-                CONSTRUCTION.container = Math.min(sourceCount +1, containersAllowedThisLevel);
+//                CONSTRUCTION.container = Math.min(sourceCount +1, containersAllowedThisLevel);
+                CONSTRUCTION.container = Math.min(sourceCount, containersAllowedThisLevel);
             }
         }
         
