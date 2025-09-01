@@ -1,28 +1,30 @@
-var roleBuilder = require('role.builder');
-var roleHarvester = require('role.harvester');
-var roleUpgrader = require('role.upgrader');
 var roleWorker = require('role.worker');
 var roleMiner = require('role.miner');
 var makeCreep = require('make.creep');
 var taskManager = require('task.manager');
 var baseUtilities = require('base.utilities');
+
 var baseArchitect = require('base.architect');
 var baseManager = require('base.manager');
+var roomCacheUtility = require('room.cache');
 
 const WORKFORCE = { miner: 0, fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0 };
 const CONSTRUCTION = { container: 0, extension: 0 }
 
 module.exports.loop = function () {
     
+
     baseUtilities.cleanUpCreepMemory();
 
     // Perform per-room actions
     for (const roomName in Game.rooms) {
         const thisRoom = Game.rooms[roomName];
         
+        roomCacheUtility.init(thisRoom);
         baseArchitect.run(thisRoom);
-        taskManager.prepare(thisRoom);
         baseManager.run(thisRoom);
+
+        taskManager.prepare(thisRoom);
       
         // Manage base by level
         const roomControllerLevel = thisRoom.controller.level || 0;

@@ -6,6 +6,7 @@
  * var mod = require('base.manager');
  * mod.thing == 'a thing'; // true
  */
+var roomCacheUtility = require('room.cache');
 
 module.exports = {
     run(room) {
@@ -21,6 +22,21 @@ module.exports = {
         spawner = Game.getObjectById(codex.structures.mainSpawn.id);
         
         // Count each type of creep
+        var roomCache = roomCacheUtility.get(room);
+        if (!roomCache.creepsCount || roomCache.tick != Game.time) {
+            // Recalculate count
+            for (var n in Game.creeps) {
+                var creep = Game.creeps[n];
+                
+                if (!creep.room || creep.room.name != room.name) {
+                    continue;
+                }
+                
+                var role = (creep.memory && creep.memory.role) || 'unknown';
+                roomCache.creepsByRole[role] = (roomCache.creepsByRole[role] || 0) + 1;
+                roomCache.creepsCount = (roomCache.creepsCount || 0) + 1;
+            }
+        }
         
         // Get the list of manning requirements
         var manning = Memory.rooms[room.name].architect.manning;
