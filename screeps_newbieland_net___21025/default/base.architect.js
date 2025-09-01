@@ -13,8 +13,8 @@ function loadMemory(room) {
     return Memory.rooms[room.name].architect;
 }
 
-function initBase(codex) {
-    console.log('Architect Initilizing Base - ' + Game.time);
+function initBase(codex, room) {
+    console.log('Architect: Initilizing Base - ' + Game.time);
     codex.state.level = 1;
     codex.manning = {
         fastworker: 1,
@@ -31,7 +31,7 @@ function initBase(codex) {
 
 function discoverBaseResources(codex, room) {
     // Get initial scan of the room
-    console.log('Architect scanning the room - ' + Game.time);
+    console.log('Architect: scanning the room - ' + Game.time);
     
     // Save spawner id and location
     var spawner = room.find(FIND_MY_SPAWNS)[0];
@@ -65,26 +65,51 @@ function discoverBaseResources(codex, room) {
     codex.state.planStep = 'calculateDistances';
 }
 
+function calculateBaseResourceDistances(codex, room) {
+    console.log('Architect: Starting distance calculations - ' + Game.time);
+    var spawner = codex.structures.mainSpawn;
+    var controller = codex.structures.controller;
+    
+    var closestToSpawnId = '';
+    var closestToSpawnDistance = 1e9;
+    
+    var closestToControllerId = '';
+    var closestToControllerDistance = 1e9;
+    
+    if (!spawner || !controller) { console.log('Architect: ERROR missing main structure!'); return; }
+    
+    _.forEach(codex.sources, function(thisSource, thisSourceId) {
+        thisSource.distanceToSpawn = Math.abs(thisSource.x - spawner.x) + Math.abs(thisSource.y - spawner.y);
+        thisSource.distanceToController = Math.abs(thisSource.x - controller.x) + Math.abs(thisSource.y - controller.y);
+        thisSource.lastDistanceCalc = Game.time;
+        
+        if (thisSource.distanceToSpawn < closestToSpawnDistance) {
+            closestToSpawnId = thisSourceId;
+            closestToSpawnDistance = thisSource.distanceToSpawn;
+        }
+        
+        if (thisSource.distanceToController < closestToControllerDistance) {
+            closestToControllerId = thisSourceId;
+            closestToControllerDistance = thisSource.distanceToController;
+        }
+    });
+    
+    spawner.nearestSource = closestToSpawnId;
+    controller.nearestSource = closestToControllerId;
+    
+    codex.state.planStep = 'planContainers';
+}
+
 module.exports = {
     run(room) {
         var codex = loadMemory(room);
         
         if (codex.state.planStep == 'init') {
-            initBase(codex);
+            initBase(codex, room);
         } else if (codex.state.planStep == 'discover') {
             discoverBaseResources(codex, room);
         } else if (codex.state.planStep == 'calculateDistances') {
-            console.log('Architect Starting distance calculations - ' + Game.time);
-            var spawner = codex.structures.mainSpawn;
-            var controller = codex.structures.controller;
-            
-            if (!spawner || !controller) { console.log('ERROR missing main structure!'); return; }
-            
-            _.forEach(codex.sources, function(thisSource, id) {
-                thisSource.distanceToSpawn = Math.abs(thisSource.x - spawner.x) + Math.abs(thisSource.y - spawner.y);
-                thisSource.distanceToController = Math.abs(thisSource.x - controller.x) + Math.abs(thisSource.y - controller.y);
-                thisSource.lastDistanceCalc = Game.time;
-            });
+            calculateBaseResourceDistances(codex, room);
         }
     }
 };

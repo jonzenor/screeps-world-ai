@@ -10,12 +10,15 @@
 module.exports = {
     run(room) {
         // Load the architect codex for the roster roles required
-        if (!Memory.rooms[room.name] || !Memory.rooms[room.name].architect || Memory.rooms[room.name].architect.manning) {
-            console.log('Manager sleeping until architect codex is ready');
+        if (!Memory.rooms[room.name] || !Memory.rooms[room.name].architect || !Memory.rooms[room.name].architect.manning) {
+            console.log('Manager: Sleeping until architect codex is ready');
             return;
         }
         
+        var codex = Memory.rooms[room.name].architect;
+        
         // See if the spawner is spawning
+        spawner = Game.getObjectById(codex.structures.mainSpawn.id);
         
         // Count each type of creep
         
