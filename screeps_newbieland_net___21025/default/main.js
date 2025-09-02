@@ -7,6 +7,7 @@ var baseUtilities = require('base.utilities');
 var baseArchitect = require('base.architect');
 var baseManager = require('base.manager');
 var roomCacheUtility = require('room.cache');
+var hudOverlay = require('hud.overlay');
 
 const WORKFORCE = { miner: 0, fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0 };
 const CONSTRUCTION = { container: 0, extension: 0 }
@@ -23,6 +24,8 @@ module.exports.loop = function () {
         roomCacheUtility.init(thisRoom);
         baseArchitect.run(thisRoom);
         baseManager.run(thisRoom);
+        hudOverlay.render(thisRoom);
+        
 
         taskManager.prepare(thisRoom);
       
@@ -104,30 +107,9 @@ module.exports.loop = function () {
             if (thisRoom.energyAvailable < 200) break;
             
             if (have < need) {
-                makeCreep.run(thisRoom, role);
+                //makeCreep.run(thisRoom, role);
                 break;
             }
-        }
-
-        // Set the GUI Overlay for the room    
-        const vis = new RoomVisual(thisRoom.name);
-
-        // ----- Display Worker Counts ----- //        
-        vis.rect(1, 10, 8.5, (Object.keys(WORKFORCE).length + 1.1), {fill: '#000', opacity: 0.3, stroke: '#fff'});
-        vis.text(`Workers`, 1.2, 11, {align: 'left', font: 0.9});
-        
-        let y = 12;
-        const xL = 1.2;      // left column
-        const xR = 9.0;      // right column edge
-
-        for (const role of Object.keys(WORKFORCE)) {
-            const have = counts[role] || 0;
-            const need = WORKFORCE[role] || 0;
-        
-            vis.text(role, xL, y, { align: 'left',  font: '0.7 monospace' });
-            vis.text(`${have} / ${need}`, xR, y, { align: 'right', font: '0.7 monospace' });
-        
-            y += 0.9;
         }
 
         // Add Overlay to spawner

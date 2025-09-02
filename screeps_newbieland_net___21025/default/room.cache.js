@@ -17,13 +17,20 @@ module.exports = {
             // Initialize Cache
             roomCache = global.__cache.rooms[room.name] = { 
                 tick: Game.time,
-                creepsCount: 0,
-                creepsByRole: {},
+                creeps: {
+                    tick: 0,
+                    creepsCount: 0,
+                    creepsByRole: {}
+                },
             }
         }
     },
     
     get(room) {
         return global.__cache.rooms[room.name];
+    },
+    
+    getSection(room, key) {
+        return global.__cache.rooms[room.name][key];
     },
 };

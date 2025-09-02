@@ -17,9 +17,9 @@ function initBase(codex, room) {
     console.log('Architect: Initilizing Base - ' + Game.time);
     codex.state.level = 1;
     codex.manning = {
-        fastworker: 1,
-        worker: 3,
-        miner: 0,
+        fastworker: { count: 1, priority: 1 },
+        worker: { count: 3, priority: 5 },
+        miner: { count: 0, priority: 10 },
     };
     
     codex.structures.mainSpawn = {};
