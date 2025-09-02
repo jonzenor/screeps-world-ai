@@ -44,7 +44,7 @@ function buildBody(role, budget) {
     return body;
 }
 
-function cacheCreepCount(roomCache) {
+function cacheCreepCount(room, roomCache) {
     if (roomCache.tick != Game.time) {
         // Reset vars
         roomCache.tick = Game.time;
@@ -62,6 +62,7 @@ function cacheCreepCount(roomCache) {
             roomCache.creepsCount = (roomCache.creepsCount || 0) + 1;
         }
     }
+    
 }
 
 module.exports = {
@@ -73,6 +74,10 @@ module.exports = {
         }
         
         var codex = Memory.rooms[room.name].architect;
+
+        // Count each type of creep
+        var roomCache = roomCacheUtility.getSection(room, 'creeps');
+        cacheCreepCount(room, roomCache);
         
         // See if the spawner is spawning
         spawner = Game.getObjectById(codex.structures.mainSpawn.id);
@@ -87,10 +92,6 @@ module.exports = {
         if (energyAvailable < maxEnergy) {
             return;
         }
-        
-        // Count each type of creep
-        var roomCache = roomCacheUtility.getSection(room, 'creeps');
-        cacheCreepCount(roomCache);
         
         // Get the list of manning requirements
         var manning = Memory.rooms[room.name].architect.manning;
@@ -110,7 +111,6 @@ module.exports = {
                 var roleBody = buildBody(roleName, maxEnergy);
                 var name = roleName + '-' + Game.time;
                
-                console.log('Spawning Creep with attributes: ' + roleBody);
                 var spawnResult = spawner.spawnCreep(roleBody, name, { memory: { role: roleName, roleType: BODY_BOOK[roleName].useRole } });
                 console.log('MANAGER: Requesting Spawn: ' + maxEnergy + ':' + roleName + ' Status: ' + spawnResult);
                 return false;

@@ -13,7 +13,6 @@ const WORKFORCE = { miner: 0, fastworker: 1, worker: 2, harvester: 0, upgrader: 
 const CONSTRUCTION = { container: 0, extension: 0 }
 
 module.exports.loop = function () {
-    
 
     baseUtilities.cleanUpCreepMemory();
 
@@ -110,26 +109,6 @@ module.exports.loop = function () {
                 //makeCreep.run(thisRoom, role);
                 break;
             }
-        }
-
-        // Add Overlay to spawner
-        var roomSpawns = thisRoom.find(FIND_MY_SPAWNS)
-        for (var i = 0; i < roomSpawns.length; i++) {
-            var thisSpawn = roomSpawns[i];
-            if (!thisSpawn.spawning) continue;
-            
-            var spawning = thisSpawn.spawning;
-            var timeNeeded = spawning.needTime | 0;
-            var timeRemaining = spawning.remainingTime | 0;
-            var spawnPercent = timeNeeded ? Math.floor((timeNeeded - timeRemaining) * 100 / timeNeeded) : 0;
-            var spawnName = spawning.name;
-            var spawnRole = (Memory.creeps[spawnName] && Memory.creeps[spawnName].role) || 'creep';
-
-            thisSpawn.room.visual.text(
-                '🛠' + spawnRole + ' ' + spawnPercent + '%',
-                thisSpawn.pos.x + 1, thisSpawn.pos.y - 0.25,
-                { align: 'left', opacity: 0.8, font: 0.8 }
-            );
         }
     }
 
