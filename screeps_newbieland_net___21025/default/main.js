@@ -35,7 +35,6 @@ module.exports.loop = function () {
             WORKFORCE.fastworker = 2;
         }
 
-
         // Manage the base
         var roomController = thisRoom.controller;
         var MAX_CONSTRUCTION_SITES = 0;

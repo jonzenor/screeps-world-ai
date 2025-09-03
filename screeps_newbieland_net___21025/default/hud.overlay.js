@@ -58,8 +58,6 @@ module.exports = {
         var codex = Memory.rooms[room.name].architect;
         var creepCache = roomCacheUtility.getSection(room, 'creeps');
         
-        console.log('UI Cache: ' + JSON.stringify(creepCache));
-
         workerCountOverlay(vis, room, codex, creepCache);
         spawnerConstructionAlert(room);
     }

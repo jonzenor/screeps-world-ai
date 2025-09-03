@@ -81,7 +81,7 @@ module.exports = {
         
         // See if the spawner is spawning
         spawner = Game.getObjectById(codex.structures.mainSpawn.id);
-        if (spawner.spawning) {
+        if (!spawner || spawner.spawning) {
             return;
         }
         

@@ -9,7 +9,7 @@
 
 function loadMemory(room) {
     if (!Memory.rooms[room.name]) Memory.rooms[room.name] = {};
-    if (!Memory.rooms[room.name].architect) Memory.rooms[room.name].architect = { state: {v: 1, last: Game.time, planStep: 'init' }, sources: {}, structures: {}, constructions: {}, plan: {} };
+    if (!Memory.rooms[room.name].architect) Memory.rooms[room.name].architect = { state: {v: 1, last: Game.time, planStep: 'init' }, sources: {}, structures: {}, constructions: {}, plan: {}, planIndex: {} };
     return Memory.rooms[room.name].architect;
 }
 
@@ -23,7 +23,7 @@ function initBase(codex, room) {
     };
     
     codex.structures.mainSpawn = {};
-    codex.structures.containers = {};
+    codex.structures.containers = [];
     codex.structures.controller = {};
     
     codex.state.planStep = 'discover';
@@ -40,6 +40,8 @@ function discoverBaseResources(codex, room) {
         x: spawner.pos.x,
         y: spawner.pos.y,
         nearestSource: '',
+        containerPos: {},
+        containerStatus: '',
     }
     
     // Save controller id and location
@@ -100,6 +102,116 @@ function calculateBaseResourceDistances(codex, room) {
     codex.state.planStep = 'planContainers';
 }
 
+function getAvailableNeighboringTiles(pos, room, codex) {
+    var terrain = Game.map.getRoomTerrain(room.name);
+    var availableTiles = [];
+    
+    for (var dx = -1; dx <= 1; dx ++) {
+        for (var dy =-1; dy <= 1; dy ++) {
+            
+            // Skip checking the center tile
+            if (dx === 0 && dy === 0) continue;
+            
+            var x = pos.x + dx, y = pos.y + dy;
+            
+            // Disqualify tiles outside the map
+            if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+            
+            // Disqualify if there is a plan to build something there already
+            var key = x + ',' + y;
+            if (codex.planIndex[key]) { continue; }
+            
+            var tileTerrain = terrain.get(x, y); // 0 = plain, 1 = wall, 2 = swamp
+            
+            if (tileTerrain !== TERRAIN_MASK_WALL) {
+                availableTiles.push({ x: x, y: y, terrain: tileTerrain});
+            }
+        }
+    }
+    
+    return availableTiles;
+}
+
+// Of the given tiles, which is the closest to the target
+function chooseNearestSpotToTarget(tiles, targetPos) {
+    var bestPos = null;
+    var bestScore = 1e9;
+    
+    _.forEach(tiles, function(t) {
+        var distance = Math.abs(t.x - targetPos.x) + Math.abs(t.y - targetPos.y);
+        var swampPenalty = (t.terrain === TERRAIN_MASK_SWAMP) ? 2 : 0;
+        var score = distance + swampPenalty;
+        
+        if (score < bestScore) { 
+           bestScore = score;
+           bestPos = t
+        }
+    });
+    
+    return bestPos;
+}
+
+function pickNearestSourceExcluding(planSite, codex, avoidId){
+  var target = codex.structures[planSite]; // {x,y,nearestSource}
+  var bestId = null, bestD = 1e9;
+
+  _.forEach(codex.sources, function(src, id){
+    if (id === avoidId) return;
+    var d = Math.abs(src.x - target.x) + Math.abs(src.y - target.y);
+    if (d < bestD){ bestD = d; bestId = id; }
+  });
+
+  // fallback: use the precomputed nearest if exclusion exhausted
+  return bestId || codex.structures[planSite].nearestSource;
+}
+
+
+function planContainerNextToTargetsNearestSource(room, planSite, codex, avoidSource) {
+    // Plan nearest to spawn
+    var siteSource = null;
+    
+    if (avoidSource != '' && codex.structures[planSite].nearestSource == avoidSource) {
+        var siteSourceId = pickNearestSourceExcluding(planSite, codex, avoidSource);
+        siteSource = Game.getObjectById(siteSourceId);
+    } else {
+        siteSource = Game.getObjectById(codex.structures[planSite].nearestSource);
+    }
+    
+    var tiles = getAvailableNeighboringTiles(siteSource.pos, room, codex);
+
+    // TODO what to do when there are no available tiles?
+    if (!tiles) {
+        console.log('ARCHITECT: ERROR: No available tiles');
+        return;
+    }
+    
+    codex.structures[planSite].buildableTilesCount = tiles.length;
+    var useTile = chooseNearestSpotToTarget(tiles, siteSource.pos);
+    
+    if (!useTile) {
+        console.log('ARCHITECT: ERROR: No useable container site found for source ' + planSite);
+    } else {
+        if (!codex.plan.containers) codex.plan.containers = [];
+        var key = useTile.x + ',' + useTile.y;
+        codex.planIndex[key] = 'container';
+        
+        codex.plan.containers.push({
+            x: useTile.x,
+            y: useTile.y,
+            priority: 1,
+            rcl: 2,
+            sourceId: siteSource.id,
+            siteId: null,
+            status: 'planned',
+        });
+        
+        // codex.sources[spawnSource.id].plannedContainer = {x: useTile.x, y: useTile.y};
+        codex.sources[siteSource.id].containerId = null;
+        
+        console.log('Saved container site for ' + siteSource);
+    }
+}
+
 module.exports = {
     run(room) {
         var codex = loadMemory(room);
@@ -110,6 +222,13 @@ module.exports = {
             discoverBaseResources(codex, room);
         } else if (codex.state.planStep == 'calculateDistances') {
             calculateBaseResourceDistances(codex, room);
+        } else if (codex.state.planStep == 'planContainers') {
+            planContainerNextToTargetsNearestSource(room, 'mainSpawn', codex, '');
+            planContainerNextToTargetsNearestSource(room, 'controller', codex, codex.structures.mainSpawn.nearestSource);
+            
+            // Plan other sources
+            
+            // Switch to plan extensions
         }
     }
 };
