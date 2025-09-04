@@ -309,7 +309,8 @@ module.exports = {
             var midpoint = {x: midpointX, y: midpointY };
             
             var towerSite = findNearestBuildableTile(midpoint, room, codex, 4);
-            console.log('Found tower site: ' + JSON.stringify(towerSite));
+            
+            // Tag the site for building
             
             // Get free tiles near the turret, tag the mote as unusuable
             
