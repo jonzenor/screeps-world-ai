@@ -25,8 +25,6 @@ function initBase(codex, room) {
     codex.structures.mainSpawn = {};
     codex.structures.containers = [];
     codex.structures.controller = {};
-    
-    codex.state.planStep = 'discover';
 }
 
 function discoverBaseResources(codex, room) {
@@ -63,8 +61,6 @@ function discoverBaseResources(codex, room) {
             lastDistanceCalc: 0,
         }
     });
-    
-    codex.state.planStep = 'calculateDistances';
 }
 
 function calculateBaseResourceDistances(codex, room) {
@@ -98,8 +94,6 @@ function calculateBaseResourceDistances(codex, room) {
     
     spawner.nearestSource = closestToSpawnId;
     controller.nearestSource = closestToControllerId;
-    
-    codex.state.planStep = 'planContainers';
 }
 
 function getAvailableNeighboringTiles(pos, room, codex) {
@@ -178,57 +172,114 @@ function planContainerNextToTargetsNearestSource(room, planSite, codex, avoidSou
     }
     
     var tiles = getAvailableNeighboringTiles(siteSource.pos, room, codex);
+    codex.structures[planSite].buildableTilesCount = tiles.length;
 
     // TODO what to do when there are no available tiles?
     if (!tiles) {
-        console.log('ARCHITECT: ERROR: No available tiles');
+        console.log('ARCHITECT ERROR: No available tiles for site: ' + siteSource.pos);
         return;
     }
     
-    codex.structures[planSite].buildableTilesCount = tiles.length;
     var useTile = chooseNearestSpotToTarget(tiles, siteSource.pos);
     
     if (!useTile) {
-        console.log('ARCHITECT: ERROR: No useable container site found for source ' + planSite);
+        console.log('ARCHITECT ERROR: No useable container site found for source ' + planSite);
     } else {
-        if (!codex.plan.containers) codex.plan.containers = [];
-        var key = useTile.x + ',' + useTile.y;
-        codex.planIndex[key] = 'container';
-        
-        codex.plan.containers.push({
-            x: useTile.x,
-            y: useTile.y,
-            priority: 1,
-            rcl: 2,
-            sourceId: siteSource.id,
-            siteId: null,
-            status: 'planned',
-        });
-        
-        // codex.sources[spawnSource.id].plannedContainer = {x: useTile.x, y: useTile.y};
-        codex.sources[siteSource.id].containerId = null;
-        
-        console.log('Saved container site for ' + siteSource);
+        var usePriority = (planSite == 'mainSpawn') ? 1 : 3;
+        recordSourceContainerSite(codex, siteSource, useTile, usePriority)
     }
+}
+
+function planContainerSiteNextToSource(room, codex) {
+    _.forEach(codex.sources, function(src, id) {
+        
+        // Check if the source has a build site already
+        if (src.containerStatus && src.containerStatus == 'planned') {
+            return;
+        }
+        
+        var thisSource = Game.getObjectById(id);
+        
+        if (!thisSource) {
+            console.log('ARCHITECT ERROR: Room source has vanished! ' + id);
+            return;
+        }
+        
+        // Plan the build site
+        // This needs the codex so it can look up if certain sites are called for already
+        var tiles = getAvailableNeighboringTiles(thisSource.pos, room, codex);
+        
+        if (!tiles) {
+            console.log('ARCHITECT ERROR: No available tiles for site: ' + thisSource.id);
+            return;
+        }
+        
+        var useTile = chooseNearestSpotToTarget(tiles, thisSource.pos);
+        if (!useTile) {
+            console.log('ARCHITECT ERROR: No useable container site found for source ' + thisSource.id);
+        } else {
+            recordSourceContainerSite(codex, thisSource, useTile, 5);
+        }
+    });
+}
+
+function recordSourceContainerSite(codex, siteSource, useTile, usePriority) {
+    if (!codex.plan.containers) codex.plan.containers = [];
+    var key = useTile.x + ',' + useTile.y;
+    codex.planIndex[key] = 'container';
+    
+    codex.plan.containers.push({
+        x: useTile.x,
+        y: useTile.y,
+        priority: usePriority,
+        rcl: 2,
+        sourceId: siteSource.id,
+        siteId: null,
+        status: 'planned',
+    });
+    
+    // codex.sources[spawnSource.id].plannedContainer = {x: useTile.x, y: useTile.y};
+    codex.sources[siteSource.id].containerId = null;
+    codex.sources[siteSource.id].containerStatus = 'planned';
+    
+    console.log('Saved container site for ' + siteSource);
+}
+
+function planRoomContainers(codex, room) {
+    planContainerNextToTargetsNearestSource(room, 'mainSpawn', codex, '');
+    planContainerNextToTargetsNearestSource(room, 'controller', codex, codex.structures.mainSpawn.nearestSource);
+    planContainerSiteNextToSource(room, codex);
 }
 
 module.exports = {
     run(room) {
         var codex = loadMemory(room);
         
+        // Using else if here so that each step only fires one of these phases
         if (codex.state.planStep == 'init') {
             initBase(codex, room);
+            codex.state.planStep = 'discover';
+            
         } else if (codex.state.planStep == 'discover') {
             discoverBaseResources(codex, room);
+            codex.state.planStep = 'calculateDistances';
+            
         } else if (codex.state.planStep == 'calculateDistances') {
             calculateBaseResourceDistances(codex, room);
+            codex.state.planStep = 'planContainers';
+            
         } else if (codex.state.planStep == 'planContainers') {
-            planContainerNextToTargetsNearestSource(room, 'mainSpawn', codex, '');
-            planContainerNextToTargetsNearestSource(room, 'controller', codex, codex.structures.mainSpawn.nearestSource);
+            planRoomContainers(codex, room);
+            codex.state.planStep = 'planTurret';
             
-            // Plan other sources
-            
-            // Switch to plan extensions
         }
+        
+        // Plan turret
+        
+        // Plan extension sites
+        
+        // Update conditions based on RC level when that change happens
+        
+        // Build sites that are needed
     }
 };
