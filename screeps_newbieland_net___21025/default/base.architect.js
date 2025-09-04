@@ -251,6 +251,37 @@ function planRoomContainers(codex, room) {
     planContainerSiteNextToSource(room, codex);
 }
 
+//----- Turret -----//
+function findNearestBuildableTile(centerPoint, room, codex, maxRange) {
+    var terrain = Game.map.getRoomTerrain(room.name);
+    
+    for (var r = 0; r <= maxRange; r++) {
+        for (var dx = -r; dx <= r; dx++) {
+            for (var dy = -r; dy <= r; dy++) {
+                
+                // Ignore the center point
+                if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+                
+                var x = centerPoint.x + dx, y = centerPoint.y + dy;
+                
+                // Ignore points outside the map
+                if (x < 0 || x > 49 || y < 0 || y > 49) continue;
+                
+                // Ignore walls
+                if (terrain.get(x, y) === TERRAIN_MASK_WALL) continue;
+                
+                // Ignore sites reserved for other builds
+                var key = x + ',' + y;
+                if (codex.planIndex && codex.planIndex[key]) continue;
+                
+                return { x:x, y:y, terrain: terrain.get(x, y) };
+            }
+        }
+    }
+    
+    return null;
+}
+
 module.exports = {
     run(room) {
         var codex = loadMemory(room);
@@ -266,11 +297,32 @@ module.exports = {
             
         } else if (codex.state.planStep == 'calculateDistances') {
             calculateBaseResourceDistances(codex, room);
+            codex.state.planStep = 'planTurret';
+            
+        } else if (codex.state.planStep == 'planTurret') {
+            // Find the midpoint between spawn and controller
+            var mainSpawn = Game.getObjectById(codex.structures.mainSpawn.id);
+            var controller = Game.getObjectById(codex.structures.controller.id);
+            
+            var midpointX = Math.floor((mainSpawn.pos.x + controller.pos.x) / 2);
+            var midpointY = Math.floor((mainSpawn.pos.y + controller.pos.y) / 2);
+            var midpoint = {x: midpointX, y: midpointY };
+            
+            var towerSite = findNearestBuildableTile(midpoint, room, codex, 4);
+            console.log('Found tower site: ' + JSON.stringify(towerSite));
+            
+            // Get free tiles near the turret, tag the mote as unusuable
+            
+            
+            // Plan the location of the storage on the spawn side of the turret
+            
+            // Plan the location of the container next to the storage
+            
             codex.state.planStep = 'planContainers';
             
         } else if (codex.state.planStep == 'planContainers') {
             planRoomContainers(codex, room);
-            codex.state.planStep = 'planTurret';
+            codex.state.planStep = 'planExtensions';
             
         }
         
