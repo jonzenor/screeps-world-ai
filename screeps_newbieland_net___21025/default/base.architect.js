@@ -284,6 +284,17 @@ function findNearestBuildableTile(centerPoint, room, codex, maxRange) {
     return null;
 }
 
+function ringTiles(center, radius) {
+    var out = [];
+    for (var dx = -radius; dx <= radius; dx ++) {
+        for (var dy = -radius; dy <= radius; dy ++) {
+            if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+            out.push({x: center.x + dx, y: center.y + dy});
+        }
+    }
+    return out;
+}
+
 module.exports = {
     run(room) {
         var codex = loadMemory(room);
@@ -337,6 +348,7 @@ module.exports = {
 
             var key = towerSite.x + ',' + towerSite.y;
             codex.planIndex[key] = 'turret';
+            console.log('ARCHITECT: Planned Turret site at ' + key);
             
             codex.state.planStep = 'planTurretMote';
         } else if (codex.state.planStep == 'planTurretMote') {
@@ -348,6 +360,7 @@ module.exports = {
                 key = tile.x + ',' + tile.y;
                 codex.planIndex[key] = 'mote';
             });
+            console.log('ARCHITECT: Planned mote around turret');
             
             codex.state.planStep = 'planTurretStorage';
         } else if (codex.state.planStep == 'planTurretStorage') {
@@ -362,11 +375,11 @@ module.exports = {
             // Because of the mote we have around the turrent
             var storageSite = {x: turretSite.x + 2*dx, y: turretSite.y + 2*dy };
             
-            var key = storageSite.x + ',' + storageSite.y;
-            if (codex.planIndex && codex.planIndex[key]) {
+            var storageKey = storageSite.x + ',' + storageSite.y;
+            if (codex.planIndex && codex.planIndex[storageKey]) {
                 console.log('ARCHITECT ERROR: Invalid Turret Storage container location!');
             } else {
-                codex.planIndex[key] = 'storage';
+                codex.planIndex[storageKey] = 'storage';
                 if (!codex.plan.storage) {
                     codex.plan.storage = [];
                 }
@@ -388,8 +401,8 @@ module.exports = {
             if (!containerSite) {
                 console.log('ARCHITECT ERROR: Could not locate valid Turret container site');
             } else {
-                key = containerSite.x + ',' + containerSite.y;
-                codex.planIndex[key] = 'container';
+                var containerKey = containerSite.x + ',' + containerSite.y;
+                codex.planIndex[containerKey] = 'container';
                 if (!codex.plan.containers) {
                     codex.plan.containers = [];
                 }
@@ -404,16 +417,48 @@ module.exports = {
                 });
                 
             }
-            
+            console.log('ARCHITECT: Planned storage system near Turret: ' + storageKey + ' ' + containerKey);
             codex.state.planStep = 'planContainers';
         } else if (codex.state.planStep == 'planContainers') {
             planRoomContainers(codex, room);
             codex.state.planStep = 'planExtensions';
             
+        } else if (codex.state.planStep == 'planExtensions') {
+            // Get the location of the turret
+            var turretSite = {x: codex.structures.mainTurret.x, y: codex.structures.mainTurret.y };
+            var extensionSites = ringTiles(turretSite, 2);
+            var extensionCount = 0;
+            var buildLevel = 2;
+            
+            if (!codex.plan.extensions) {
+                codex.plan.extensions = [];
+            }
+            
+            _.forEach(extensionSites, function(p) {
+                var key = p.x + ',' + p.y;
+                if (!codex.planIndex[key]) {
+                    extensionCount ++;
+                    
+                    if (extensionCount <= 5) { buildLevel = 2; }
+                    else if (extensionCount <= 10) { buildLevel = 3; }
+                    else { buildLevel = 4; }
+                    
+                    codex.planIndex[key] = 'extension';
+                    codex.plan.extensions.push({
+                       x: p.x,
+                       y: p.y,
+                       rcl: buildLevel,
+                       priority: 5,
+                       siteId: null,
+                       status: 'planned'
+                    });
+                }
+            });
+            
+            codex.state.planStep = 'complete';
         }
         
-        // Plan extension sites
-        
+
         // Update conditions based on RC level when that change happens
         
         // Build sites that are needed
