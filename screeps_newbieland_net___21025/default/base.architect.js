@@ -6,19 +6,20 @@
  * var mod = require('base.architect');
  * mod.thing == 'a thing'; // true
  */
+ var roomCacheUtility = require('room.cache');
 
 function loadMemory(room) {
     if (!Memory.rooms[room.name]) Memory.rooms[room.name] = {};
-    if (!Memory.rooms[room.name].architect) Memory.rooms[room.name].architect = { state: {v: 1, last: Game.time, planStep: 'init' }, sources: {}, structures: {}, constructions: {}, plan: {}, planIndex: {} };
+    if (!Memory.rooms[room.name].architect) Memory.rooms[room.name].architect = { state: {v: 1, last: Game.time, planStep: 'init' }, sources: {}, structures: {}, plan: [], planIndex: {} };
     return Memory.rooms[room.name].architect;
 }
 
 function initBase(codex, room) {
     console.log('Architect: Initilizing Base - ' + Game.time);
-    codex.state.level = 1;
+    codex.state.level = room.controller.level;
     codex.manning = {
         fastworker: { count: 1, priority: 1 },
-        worker: { count: 3, priority: 5 },
+        worker: { count: 2, priority: 5 },
         miner: { count: 0, priority: 10 },
     };
     
@@ -187,7 +188,7 @@ function planContainerNextToTargetsNearestSource(room, planSite, codex, avoidSou
     if (!useTile) {
         console.log('ARCHITECT ERROR: No useable container site found for source ' + planSite);
     } else {
-        var usePriority = (planSite == 'mainSpawn') ? 1 : 3;
+        var usePriority = (planSite == 'mainSpawn') ? 2 : 5;
         recordSourceContainerSite(codex, siteSource, useTile, usePriority)
     }
 }
@@ -226,11 +227,12 @@ function planContainerSiteNextToSource(room, codex) {
 }
 
 function recordSourceContainerSite(codex, siteSource, useTile, usePriority) {
-    if (!codex.plan.containers) codex.plan.containers = [];
+    if (!codex.plan) codex.plan = [];
     var key = useTile.x + ',' + useTile.y;
     codex.planIndex[key] = 'container';
     
-    codex.plan.containers.push({
+    codex.plan.push({
+        type: STRUCTURE_CONTAINER,
         x: useTile.x,
         y: useTile.y,
         priority: usePriority,
@@ -243,8 +245,6 @@ function recordSourceContainerSite(codex, siteSource, useTile, usePriority) {
     // codex.sources[spawnSource.id].plannedContainer = {x: useTile.x, y: useTile.y};
     codex.sources[siteSource.id].containerId = null;
     codex.sources[siteSource.id].containerStatus = 'planned';
-    
-    console.log('Saved container site for ' + siteSource);
 }
 
 function planRoomContainers(codex, room) {
@@ -333,11 +333,8 @@ module.exports = {
                 nearestStorage: null
             };
             
-            if (!codex.plan.turrets) {
-                codex.plan.turrets = [];
-            }
-            
-            codex.plan.turrets.push({
+            codex.plan.push({
+                type: STRUCTURE_TOWER,
                 x: towerSite.x,
                 y: towerSite.y,
                 priority: 1,
@@ -380,14 +377,12 @@ module.exports = {
                 console.log('ARCHITECT ERROR: Invalid Turret Storage container location!');
             } else {
                 codex.planIndex[storageKey] = 'storage';
-                if (!codex.plan.storage) {
-                    codex.plan.storage = [];
-                }
-                
-                codex.plan.storage.push({
+
+                codex.plan.push({
+                    type: STRUCTURE_STORAGE,
                     x: storageSite.x,
                     y: storageSite.y,
-                    priority: 1,
+                    priority: 4,
                     rcl: 4,
                     siteId: null,
                     status: 'planned',
@@ -403,14 +398,12 @@ module.exports = {
             } else {
                 var containerKey = containerSite.x + ',' + containerSite.y;
                 codex.planIndex[containerKey] = 'container';
-                if (!codex.plan.containers) {
-                    codex.plan.containers = [];
-                }
-                
-                codex.plan.containers.push({
+
+                codex.plan.push({
+                    type: STRUCTURE_CONTAINER,
                     x: containerSite.x,
                     y: containerSite.y,
-                    priority: 2,
+                    priority: 3,
                     rcl: 3,
                     siteId: null,
                     status: 'planned',
@@ -421,6 +414,7 @@ module.exports = {
             codex.state.planStep = 'planContainers';
         } else if (codex.state.planStep == 'planContainers') {
             planRoomContainers(codex, room);
+            console.log('ARCHITECT: Planned room containers');
             codex.state.planStep = 'planExtensions';
             
         } else if (codex.state.planStep == 'planExtensions') {
@@ -429,10 +423,6 @@ module.exports = {
             var extensionSites = ringTiles(turretSite, 2);
             var extensionCount = 0;
             var buildLevel = 2;
-            
-            if (!codex.plan.extensions) {
-                codex.plan.extensions = [];
-            }
             
             _.forEach(extensionSites, function(p) {
                 var key = p.x + ',' + p.y;
@@ -444,23 +434,118 @@ module.exports = {
                     else { buildLevel = 4; }
                     
                     codex.planIndex[key] = 'extension';
-                    codex.plan.extensions.push({
-                       x: p.x,
-                       y: p.y,
-                       rcl: buildLevel,
-                       priority: 5,
-                       siteId: null,
-                       status: 'planned'
+                    codex.plan.push({
+                        type: STRUCTURE_EXTENSION,
+                        x: p.x,
+                        y: p.y,
+                        rcl: buildLevel,
+                        priority: 4,
+                        siteId: null,
+                        status: 'planned'
                     });
                 }
             });
+            console.log('ARCHITECT: Planned extensions for sites: ' + extensionCount);
             
             codex.state.planStep = 'complete';
+            console.log('ARCHITECT: Base planning phase completed.');
         }
         
+        // Cache how many structures we have, but this doesn't change super often, so not every tick
+        var roomCache = roomCacheUtility.getSection(room, 'architect');
+        if (!roomCache.tick || Game.time >= roomCache.tick + 10 || codex.state.level != room.controller.level) {
+            roomCache.tick = Game.time;
+            codex.state.level = room.controller.level;
+            roomCache.counts.constructions = room.find(FIND_CONSTRUCTION_SITES).length
+            roomCache.counts.containers = room.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_CONTAINER; }}).length;
+            roomCache.counts.extensions = room.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
+            roomCache.counts.towers = room.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_TOWER; }}).length;
 
-        // Update conditions based on RC level when that change happens
+            if (room.controller.level == 1) {
+                roomCache.needed.constructions = 0;
+                roomCache.needed.containers = 0;
+                roomCache.needed.extensions = 0;
+                roomCache.needed.towers = 0;
+            } else if (room.controller.level == 2) {
+                roomCache.needed.constructions = 2;
+                roomCache.needed.containers = 3;
+                roomCache.needed.extensions = 5;
+                roomCache.needed.towers = 0;
+            } else if (room.controller.level == 3) {
+                roomCache.needed.constructions = 2;
+                roomCache.needed.containers = 5;
+                roomCache.needed.extensions = 10;
+                roomCache.needed.towers = 1;
+            }
+        }
         
         // Build sites that are needed
+        if (roomCache.counts.constructions < roomCache.needed.constructions ) {
+            console.log('Build site available...');
+            var toBuild = _.chain(codex.plan)
+                .filter(function(p) { return p && p.status === 'planned' && p.rcl <= codex.state.level})
+                .sortBy(function(p) { return p.priority == null ? 999 : p.priority; })
+                .value();
+            
+            console.log('toBuild: ' + JSON.stringify(toBuild));
+            if (toBuild.length) {
+                console.log('Base plan retrieved');
+                var plan = toBuild[0];
+                var buildResponse = room.createConstructionSite(plan.x, plan.y, plan.type);
+                
+                if (buildResponse === OK) {
+                    // Get the site id
+                    console.log('ARCHITECT: Started construction: ' + JSON.stringify(plan));
+                    var buildSite = _.first(room.lookForAt(LOOK_CONSTRUCTION_SITES, plan.x, plan.y));
+                    plan.status = 'building';
+                    plan.siteId = buildSite ? buildSite.id : null;
+                    plan.nextCheck = Game.time + 50;
+                    plan.lastProgress = 0;
+                    roomCache.counts.constructions ++;
+                    
+                    if (plan.type === STRUCTURE_CONTAINER) {
+                        if (plan.sourceId) {
+                            var containerSource = codex.sources[plan.sourceId];
+                            containerSource.containerStatus = 'building';
+                        }
+                    }
+                } else {
+                    console.log('ARCHITECT ERROR: Failed to start construction: ' + buildResponse + ' - ' + JSON.stringify(plan));
+                }
+            }
+        }
+        
+        // Check on building progress
+        var buildSites = _.chain(codex.plan)
+            .filter(function(p) { return p && p.state === 'building' && p.nextCheck <= Game.time})
+            .value();
+        
+        if (buildSites && buildSites.length > 0) {
+            _.forEach(buildSites, function(buildSite) {
+                var site = Game.getObjectById(buildSite.siteId);
+                
+                if (site) {
+                    buildSite.lastProgress = (site.progress / site.progressTotal) || 0;
+                    var checkDelay = (buildSite.lastProgress > 0.8) ? 10 : 50;
+                    buildSite.nextCheck = Game.time + checkDelay;
+                } else {
+                    var newStructure = _.first(room.lookForAt(LOOK_STRUCTURES, x, y));
+                    if (!newStructure) {
+                        // Something failed, requeue
+                        buildSite.state = 'planned';
+                    } else {
+                        buildSite.state = 'completed';
+    
+                        if (buildSite.type === STRUCTURE_CONTAINER) {
+                            if (buildSite.sourceId) {
+                                var containerSource = codex.sources[plan.sourceId];
+                                containerSource.containerId = newStructure.id;
+                                containerSource.containerStatus = 'ready';
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 };

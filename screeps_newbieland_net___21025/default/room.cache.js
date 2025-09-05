@@ -22,6 +22,11 @@ module.exports = {
                     creepsCount: 0,
                     creepsByRole: {}
                 },
+                architect: {
+                    tick: 0,
+                    needed: {},
+                    counts: {}
+                }
             }
         }
     },

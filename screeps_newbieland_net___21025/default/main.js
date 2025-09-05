@@ -81,34 +81,34 @@ module.exports.loop = function () {
             // Let's build something!
             var newConstruction = null;
 
-            if (!newConstruction && containerCount < CONSTRUCTION.container) {
-                newConstruction = baseUtilities.autoPlanContainers(thisRoom);
+            // if (!newConstruction && containerCount < CONSTRUCTION.container) {
+//                newConstruction = baseUtilities.autoPlanContainers(thisRoom);
 //                console.log('Started construction on container. Set newConstruction to: ' + newConstruction);
-            }
+            // }
             
-            if (!newConstruction && extensionCount < CONSTRUCTION.extension) {
-                baseUtilities.autoPlanExtensions(thisRoom);
-//                console.log('Started construction on extension. Set newConstruction to: ' + newConstruction);
-            }
+            // if (!newConstruction && extensionCount < CONSTRUCTION.extension) {
+            //     baseUtilities.autoPlanExtensions(thisRoom);
+            //     console.log('Started construction on extension. Set newConstruction to: ' + newConstruction);
+            // }
         }
         
         // Manage the worker Counts
-        WORKFORCE.miner = containerCount;
-        if (WORKFORCE.miner > 2) {
-            WORKFORCE.worker = 2;
-        }
-        const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
-        for (const role of Object.keys(WORKFORCE)) {
-            const need = WORKFORCE[role];
-            const have = counts[role] || 0;
+        // WORKFORCE.miner = containerCount;
+        // if (WORKFORCE.miner > 2) {
+        //     WORKFORCE.worker = 2;
+        // }
+        // const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
+        // for (const role of Object.keys(WORKFORCE)) {
+        //     const need = WORKFORCE[role];
+        //     const have = counts[role] || 0;
 
-            if (thisRoom.energyAvailable < 200) break;
+        //     if (thisRoom.energyAvailable < 200) break;
             
-            if (have < need) {
-                //makeCreep.run(thisRoom, role);
-                break;
-            }
-        }
+        //     if (have < need) {
+        //         //makeCreep.run(thisRoom, role);
+        //         break;
+        //     }
+        // }
     }
 
 

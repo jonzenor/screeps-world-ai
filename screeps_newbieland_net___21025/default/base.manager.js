@@ -105,7 +105,6 @@ module.exports = {
            var needed = manning[roleName].count || 0;
            var have = (roomCache.creepsByRole && roomCache.creepsByRole[roleName]) || 0;
            
-           console.log('Role: ' + roleName + ' ' + have + '/' + needed);
            if (have < needed) {
                 
                 var roleBody = buildBody(roleName, maxEnergy);
