@@ -196,7 +196,7 @@ function planContainerNextToTargetsNearestSource(room, planSite, codex, avoidSou
     if (!useTile) {
         console.log('ARCHITECT ERROR: No useable container site found for source ' + planSite);
     } else {
-        var usePriority = (planSite == 'mainSpawn') ? 2 : 5;
+        var usePriority = (planSite == 'mainSpawn') ? 2 : 4;
         recordSourceContainerSite(codex, siteSource, useTile, usePriority)
     }
 }
@@ -436,7 +436,7 @@ module.exports = {
                 var key = p.x + ',' + p.y;
                 if (!codex.planIndex[key]) {
                     extensionCount ++;
-                    
+                    var usePriority = (extensionCount == 1) ? 4 : 5;
                     if (extensionCount <= 5) { buildLevel = 2; }
                     else if (extensionCount <= 10) { buildLevel = 3; }
                     else { buildLevel = 4; }
@@ -447,7 +447,7 @@ module.exports = {
                         x: p.x,
                         y: p.y,
                         rcl: buildLevel,
-                        priority: 4,
+                        priority: usePriority,
                         siteId: null,
                         status: 'planned'
                     });

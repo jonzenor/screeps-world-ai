@@ -35,7 +35,7 @@ function harvestNearest(creep, sourceQueue) {
   else if (isSource)    harvestResult = creep.harvest(harvestObject);
   else { creep.memory.energySource = null; return; }
   
-  if (harvestResult === OK) {
+  if (harvestResult === OK && isSource) {
       checkInAtSource(creep.memory.energySource, creep, sourceQueue);
   }
 
@@ -81,6 +81,12 @@ function findHarvestSource(creep, sourceQueue) {
     var usingSource = null;
     
     _.forEach(roomSources, function(source) {
+        if (!source.energy) {
+            // Not a natural source
+            usingSource - source;
+            return false;
+        }
+        
         if (queueUpSource(source, creep, sourceQueue)) {
             usingSource = source;
             return false; // This exits the forEach loop
@@ -139,7 +145,7 @@ function queueUpSource(source, creep, sourceQueue) {
     if (Memory.debug['worker']) {
         console.log('sourceQueue @ queueUpSource for source: ' + source + ' :' + JSON.stringify('sourceQueue'));
     }
-    
+
     if (!sourceQueue[source.id]) {
         sourceQueue = constructSourceQueue(sourceQueue, creep, source);
     }
@@ -171,7 +177,7 @@ function constructSourceQueue(sourceQueue, creep, source) {
     var sourceCodex = Memory.rooms[creep.room.name].architect.sources[sourceId];
     
     if (Memory.debug['worker']) {
-        console.log('Founc source: ' + JSON.stringify(sourceCodex));
+        console.log('Found source: ' + JSON.stringify(sourceCodex));
     }
     
     var freeSites = sourceCodex.freeSpaces;
