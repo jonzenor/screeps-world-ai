@@ -24,6 +24,8 @@ function initBase(codex, room) {
     
     codex.structures.mainSpawn = {};
     codex.structures.containers = [];
+    codex.structures.storage = [];
+    codex.structures.mainTurret = {};
     codex.structures.controller = {};
 }
 
@@ -311,23 +313,104 @@ module.exports = {
             var towerSite = findNearestBuildableTile(midpoint, room, codex, 4);
             
             // Tag the site for building
+            codex.structures.mainTurret = {
+                id: null,
+                x: towerSite.x,
+                y: towerSite.y,
+                nearestSource: null,
+                nearestContainer: null,
+                nearestStorage: null
+            };
+            
+            if (!codex.plan.turrets) {
+                codex.plan.turrets = [];
+            }
+            
+            codex.plan.turrets.push({
+                x: towerSite.x,
+                y: towerSite.y,
+                priority: 1,
+                rcl: 3,
+                siteId: null,
+                status: 'planned',
+            });
+
+            var key = towerSite.x + ',' + towerSite.y;
+            codex.planIndex[key] = 'turret';
+            
+            codex.state.planStep = 'planTurretMote';
+        } else if (codex.state.planStep == 'planTurretMote') {
+            var towerSite = {x: codex.structures.mainTurret.x, y: codex.structures.mainTurret.y };
             
             // Get free tiles near the turret, tag the mote as unusuable
+            var moteTiles = getAvailableNeighboringTiles(towerSite, room, codex);
+            _.forEach(moteTiles, function(tile, index) {
+                key = tile.x + ',' + tile.y;
+                codex.planIndex[key] = 'mote';
+            });
             
+            codex.state.planStep = 'planTurretStorage';
+        } else if (codex.state.planStep == 'planTurretStorage') {
+            var turretSite = {x: codex.structures.mainTurret.x, y: codex.structures.mainTurret.y };
+            var spawnSite = {x: codex.structures.mainSpawn.x, y: codex.structures.mainSpawn.y };
+
+            var terrain = Game.map.getRoomTerrain(room.name);
+            var dx = Math.sign(spawnSite.x - turretSite.x);
+            var dy = Math.sign(spawnSite.y - turretSite.y);
             
-            // Plan the location of the storage on the spawn side of the turret
+            // The storage site should be 2 spaces away from the turret
+            // Because of the mote we have around the turrent
+            var storageSite = {x: turretSite.x + 2*dx, y: turretSite.y + 2*dy };
+            
+            var key = storageSite.x + ',' + storageSite.y;
+            if (codex.planIndex && codex.planIndex[key]) {
+                console.log('ARCHITECT ERROR: Invalid Turret Storage container location!');
+            } else {
+                codex.planIndex[key] = 'storage';
+                if (!codex.plan.storage) {
+                    codex.plan.storage = [];
+                }
+                
+                codex.plan.storage.push({
+                    x: storageSite.x,
+                    y: storageSite.y,
+                    priority: 1,
+                    rcl: 4,
+                    siteId: null,
+                    status: 'planned',
+                });
+            }
             
             // Plan the location of the container next to the storage
+            var possibleContainerTiles = getAvailableNeighboringTiles(storageSite, room, codex);
+            var containerSite = chooseNearestSpotToTarget(possibleContainerTiles, turretSite);
+            
+            if (!containerSite) {
+                console.log('ARCHITECT ERROR: Could not locate valid Turret container site');
+            } else {
+                key = containerSite.x + ',' + containerSite.y;
+                codex.planIndex[key] = 'container';
+                if (!codex.plan.containers) {
+                    codex.plan.containers = [];
+                }
+                
+                codex.plan.containers.push({
+                    x: containerSite.x,
+                    y: containerSite.y,
+                    priority: 2,
+                    rcl: 3,
+                    siteId: null,
+                    status: 'planned',
+                });
+                
+            }
             
             codex.state.planStep = 'planContainers';
-            
         } else if (codex.state.planStep == 'planContainers') {
             planRoomContainers(codex, room);
             codex.state.planStep = 'planExtensions';
             
         }
-        
-        // Plan turret
         
         // Plan extension sites
         
