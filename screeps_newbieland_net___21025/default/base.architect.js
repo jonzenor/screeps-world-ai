@@ -436,7 +436,7 @@ module.exports = {
                 var key = p.x + ',' + p.y;
                 if (!codex.planIndex[key]) {
                     extensionCount ++;
-                    var usePriority = (extensionCount == 1) ? 4 : 5;
+                    var usePriority = (extensionCount == 1) ? 3 : 4;
                     if (extensionCount <= 5) { buildLevel = 2; }
                     else if (extensionCount <= 10) { buildLevel = 3; }
                     else { buildLevel = 4; }
