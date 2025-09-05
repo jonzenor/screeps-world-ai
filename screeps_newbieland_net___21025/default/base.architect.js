@@ -11,6 +11,11 @@
 function loadMemory(room) {
     if (!Memory.rooms[room.name]) Memory.rooms[room.name] = {};
     if (!Memory.rooms[room.name].architect) Memory.rooms[room.name].architect = { state: {v: 1, last: Game.time, planStep: 'init' }, sources: {}, structures: {}, plan: [], planIndex: {} };
+    
+    if (!Memory.debug) {
+        Memory.debug = {};
+    }
+    
     return Memory.rooms[room.name].architect;
 }
 
@@ -56,12 +61,15 @@ function discoverBaseResources(codex, room) {
     // Save the sources
     var sources = room.find(FIND_SOURCES);
     _.forEach(sources, function(thisSource) {
+        var availableTiles = getAvailableNeighboringTiles(thisSource.pos, room, codex);
+        
         codex.sources[thisSource.id] = {
             x: thisSource.pos.x,
             y: thisSource.pos.y,
             distanceToSpawn: 0,
             distanceToController: 0,
             lastDistanceCalc: 0,
+            freeSpaces: availableTiles.length,
         }
     });
 }
@@ -460,6 +468,7 @@ module.exports = {
             roomCache.counts.containers = room.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_CONTAINER; }}).length;
             roomCache.counts.extensions = room.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
             roomCache.counts.towers = room.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_TOWER; }}).length;
+            roomCache.counts.containerConstructions = room.find(FIND_CONSTRUCTION_SITES, {filter: function(s) { return s.structureType === STRUCTURE_CONTAINER; }}).length;
 
             if (room.controller.level == 1) {
                 roomCache.needed.constructions = 0;
@@ -471,6 +480,10 @@ module.exports = {
                 roomCache.needed.containers = 3;
                 roomCache.needed.extensions = 5;
                 roomCache.needed.towers = 0;
+                
+                codex.manning.miner = {priority: 1, count: (roomCache.counts.containers + roomCache.counts.containerConstructions) };
+                codex.manning.fastworker = {priority: 4, count: 2 };
+                codex.manning.worker = {priority: 5, count: 3 };
             } else if (room.controller.level == 3) {
                 roomCache.needed.constructions = 2;
                 roomCache.needed.containers = 5;

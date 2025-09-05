@@ -24,7 +24,6 @@ module.exports.loop = function () {
         baseArchitect.run(thisRoom);
         baseManager.run(thisRoom);
         hudOverlay.render(thisRoom);
-        
 
         taskManager.prepare(thisRoom);
       
@@ -164,22 +163,11 @@ module.exports.loop = function () {
       };
     }
     
-    if (!global.dropContainer) {
-      global.dropContainer = function(roomName, sourceIndex) {
-        var room = Game.rooms[roomName]; if (!room) return console.log('no room');
-        var src = room.find(FIND_SOURCES)[sourceIndex||0]; if (!src) return console.log('no source');
-        var terrain = room.getTerrain(), x=src.pos.x, y=src.pos.y, xx, yy, rc;
-        for (var dx=-1; dx<=1; dx++) for (var dy=-1; dy<=1; dy++) {
-          if (!dx && !dy) continue; xx=x+dx; yy=y+dy;
-          if (xx<1||xx>48||yy<1||yy>48) continue;
-          if (terrain.get(xx,yy)===TERRAIN_MASK_WALL) continue;
-          if (room.lookForAt(LOOK_STRUCTURES,xx,yy).length) continue;
-          if (room.lookForAt(LOOK_CONSTRUCTION_SITES,xx,yy).length) continue;
-          rc = room.createConstructionSite(xx,yy,STRUCTURE_CONTAINER);
-          console.log('container @',xx,yy,'->',rc); return rc;
-        }
-        console.log('no open adjacent tile');
-      };
+    global.toggleDebug = function(key) {
+        if (!Memory.debug) Memory.debug = {};
+        if (!Memory.debug[key]) { Memory.debug[key] = false; }
+        Memory.debug[key] = !Memory.debug[key];
+        console.log('Debug for ' + key + ' is now ' + Memory.debug[key]);
+        return Memory.debug[key];
     }
-
 }

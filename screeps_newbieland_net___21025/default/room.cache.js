@@ -13,21 +13,34 @@ module.exports = {
         
         var roomCache = global.__cache.rooms[room.name];
         
-        if (!roomCache || roomCache.tick !== Game.time) {
+        if (!roomCache) {
             // Initialize Cache
-            roomCache = global.__cache.rooms[room.name] = { 
-                tick: Game.time,
-                creeps: {
-                    tick: 0,
-                    creepsCount: 0,
-                    creepsByRole: {}
-                },
-                architect: {
-                    tick: 0,
-                    needed: {},
-                    counts: {}
-                }
-            }
+            console.log('initializing Cache');
+            roomCache = global.__cache.rooms[room.name] = {
+                tick: Game.time
+            };
+        }
+        
+        if (!roomCache.creeps) {
+            roomCache.creeps = {
+                tick: -1,
+                creepsCount: 0,
+                creepsByRole: {}
+            };
+        }
+        
+        if (!roomCache.architect) {
+            roomCache.architect = {
+                tick: -1,
+                needed: {},
+                counts: {}
+            };
+        }
+        
+        if (!roomCache.sourceQueue) {
+            roomCache.sourceQueue = {
+                tick: -1,
+            };
         }
     },
     

@@ -27,7 +27,7 @@ module.exports = {
         
         // Defien construction sites
         const sites = room.find(FIND_CONSTRUCTION_SITES);
-        for (const b of sites) tasks.push({ key: `build:${b.id}`, type: `build`, target: b.id, slots: 2, priority: 5});
+        for (const b of sites) tasks.push({ key: `build:${b.id}`, type: `build`, target: b.id, slots: (b.type === STRUCTURE_CONTAINER) ? 1 : 2, priority: 5});
         
         // Upgrade the controller in this room if it's mine
         if (room.controller && room.controller.my) {
