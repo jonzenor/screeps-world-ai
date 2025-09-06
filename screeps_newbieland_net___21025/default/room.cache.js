@@ -39,7 +39,8 @@ module.exports = {
         
         if (!roomCache.sourceQueue) {
             roomCache.sourceQueue = {
-                tick: -1,
+                tick: Game.time,
+                flushAt: Game.time + 750
             };
         }
     },
@@ -49,6 +50,14 @@ module.exports = {
     },
     
     getSection(room, key) {
-        return global.__cache.rooms[room.name][key];
+        var sectionCache = global.__cache.rooms[room.name];
+        
+        if (!sectionCache[key] || (sectionCache.flushAt && Game.time >= sectionCache.flushAt)) {
+            console.log('CACHE: Flushing cache for ' + key);
+            sectionCache[key] = {};
+            sectionCache.flushAt = Game.time + 750;
+        }
+        
+        return sectionCache[key];
     },
 };

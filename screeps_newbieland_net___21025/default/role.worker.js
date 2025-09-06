@@ -163,7 +163,7 @@ function queueUpSource(source, creep, sourceQueue) {
         }
         return true;
     } else {
-        console.log('WORKER: Failed to queue up at a source: ' + source.id);
+        // console.log('WORKER: Failed to queue up at a source: ' + source.id);
         return false;
     }
 }

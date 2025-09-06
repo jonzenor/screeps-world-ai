@@ -170,4 +170,12 @@ module.exports.loop = function () {
         console.log('Debug for ' + key + ' is now ' + Memory.debug[key]);
         return Memory.debug[key];
     }
+    
+    global.dumpQueues = function(roomName) {
+      if (global.__cache && global.__cache.rooms[roomName]) {
+        global.__cache.rooms[roomName].sourceQueue = {};
+        console.log('Cleared queue for', roomName);
+      }
+    };
+
 }
