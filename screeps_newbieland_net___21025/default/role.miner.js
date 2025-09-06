@@ -114,7 +114,7 @@ function fillContainer(creep, container) {
 
 module.exports = {
     run(creep) {
-        if (creep.memory.sleep <= Game.time) {
+        if (Game.time <= creep.memory.sleep) {
             return;
         }
         
