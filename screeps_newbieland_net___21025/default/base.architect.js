@@ -9,6 +9,7 @@
  var roomCacheUtility = require('room.cache');
 
 function loadMemory(room) {
+    if (!Memory.rooms) { Memory.rooms = {}; }
     if (!Memory.rooms[room.name]) Memory.rooms[room.name] = {};
     if (!Memory.rooms[room.name].architect) Memory.rooms[room.name].architect = { state: {v: 1, last: Game.time, planStep: 'init' }, sources: {}, structures: {}, plan: [], planIndex: {} };
     
@@ -482,7 +483,7 @@ module.exports = {
                 roomCache.needed.towers = 0;
                 
                 codex.manning.miner = {priority: 1, count: (roomCache.counts.containers + roomCache.counts.containerConstructions) };
-                codex.manning.fastworker = {priority: 4, count: 2 };
+                codex.manning.fastworker = {priority: 4, count: 3 };
                 codex.manning.worker = {priority: 5, count: 3 };
             } else if (room.controller.level == 3) {
                 roomCache.needed.constructions = 2;
