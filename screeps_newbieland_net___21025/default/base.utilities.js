@@ -141,6 +141,31 @@ function autoPlanExtensions(room) {
 function cleanUpCreepMemory() {
     for(var name in Memory.creeps) {
         if(!Game.creeps[name]) {
+            // Purge queues
+            if (!global.__cache || !global.__cache.rooms) { continue; }
+            for (var rm in global.__cache.rooms) {
+                var sourceQueue = global.__cache.rooms[rm].sourceQueue;
+                
+                if (!sourceQueue) continue;
+                
+                for (var sourceId in sourceQueue) {
+                    if (sourceQueue.hasOwnProperty(sourceId)) {
+                        var source = sourceQueue[sourceId];
+                        if (!source || typeof src !== 'object') continue;
+                        
+                        if (!Array.isArray(source.enroute)) { source.enroute = []; }
+                        if (!Array.isArray(source.at)) { source.at = []; }
+                        
+                        var index = source.enroute.indexOf(name);
+                        if (index >= 0) { source.enroute.splice(index, 1); }
+                        
+                        index = source.at.indexOf(name);
+                        if (index >= 0) { source.at.splice(index, 1); }
+                    }
+                }
+            }
+            
+            // Remove memory of this creep
             delete Memory.creeps[name];
         }
     }

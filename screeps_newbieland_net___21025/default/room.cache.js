@@ -40,7 +40,7 @@ module.exports = {
         if (!roomCache.sourceQueue) {
             roomCache.sourceQueue = {
                 tick: Game.time,
-                flushAt: Game.time + 750
+                flushAt: Game.time + 250
             };
         }
     },
@@ -55,7 +55,7 @@ module.exports = {
         if (!sectionCache[key] || (sectionCache.flushAt && Game.time >= sectionCache.flushAt)) {
             console.log('CACHE: Flushing cache for ' + key);
             sectionCache[key] = {};
-            sectionCache.flushAt = Game.time + 750;
+            sectionCache.flushAt = Game.time + 250;
         }
         
         return sectionCache[key];

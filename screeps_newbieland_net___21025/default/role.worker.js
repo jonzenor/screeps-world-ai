@@ -266,7 +266,7 @@ module.exports = {
                 creep.memory.refilling = false;
                 
                 var harvestObject = Game.getObjectById(creep.memory.energySource);
-                if (harvestObject.energy) {
+                if (harvestObject && harvestObject.energy) {
                     checkOutAtSource(creep.memory.energySource, creep, sourceQueue);
                 }
                 creep.memory.energySource = null;
