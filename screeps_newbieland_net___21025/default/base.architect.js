@@ -463,6 +463,11 @@ module.exports = {
         // Cache how many structures we have, but this doesn't change super often, so not every tick
         var roomCache = roomCacheUtility.getSection(room, 'architect');
         if (!roomCache.tick || Game.time >= roomCache.tick + 10 || codex.state.level != room.controller.level) {
+            
+            if (codex.state.level != room.controller.leve) {
+                roomCache.sleepConstruction = 0;
+            }
+            
             roomCache.tick = Game.time;
             codex.state.level = room.controller.level;
             roomCache.counts.constructions = room.find(FIND_CONSTRUCTION_SITES).length
@@ -494,14 +499,13 @@ module.exports = {
         }
         
         // Build sites that are needed
-        if (roomCache.counts.constructions < roomCache.needed.constructions ) {
+        if ((Game.time >= roomCache.sleepConstruction) && roomCache.counts.constructions < roomCache.needed.constructions ) {
             console.log('Build site available...');
             var toBuild = _.chain(codex.plan)
                 .filter(function(p) { return p && p.status === 'planned' && p.rcl <= codex.state.level})
                 .sortBy(function(p) { return p.priority == null ? 999 : p.priority; })
                 .value();
             
-            console.log('toBuild: ' + JSON.stringify(toBuild));
             if (toBuild.length) {
                 console.log('Base plan retrieved');
                 var plan = toBuild[0];
@@ -526,6 +530,9 @@ module.exports = {
                 } else {
                     console.log('ARCHITECT ERROR: Failed to start construction: ' + buildResponse + ' - ' + JSON.stringify(plan));
                 }
+            } else {
+                console.log('Sleeping construction');
+                roomCache.sleepConstruction = Game.time + 100;
             }
         }
         

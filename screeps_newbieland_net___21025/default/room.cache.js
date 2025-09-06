@@ -32,6 +32,7 @@ module.exports = {
         if (!roomCache.architect) {
             roomCache.architect = {
                 tick: -1,
+                sleepConstruction: 0,
                 needed: {},
                 counts: {}
             };
