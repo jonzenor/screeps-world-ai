@@ -1,6 +1,5 @@
 var roleWorker = require('role.worker');
 var roleMiner = require('role.miner');
-var makeCreep = require('make.creep');
 var taskManager = require('task.manager');
 var baseUtilities = require('base.utilities');
 
@@ -114,13 +113,9 @@ module.exports.loop = function () {
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
         
-        switch(creep.memory.role) {
+        switch(creep.memory.roleType) {
             case 'worker': roleWorker.run(creep); break;
-            case 'fastworker': roleWorker.run(creep); break;
             case 'miner': roleMiner.run(creep); break;
-            case 'harvester': roleHarvester.run(creep); break;
-            case 'upgrader': roleUpgrader.run(creep); break;
-            case 'builder': roleBuilder.run(creep); break;
         }
     }
     

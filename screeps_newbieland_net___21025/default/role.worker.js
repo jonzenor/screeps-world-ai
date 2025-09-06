@@ -151,7 +151,7 @@ function queueUpSource(source, creep, sourceQueue) {
     }
     
     var sourceCache = sourceQueue[source.id];
-    if (sourceCache.enroute.length < (sourceCache.available * 1.5)) {
+    if (sourceCache.enroute.length < (sourceCache.available * 1.0)) {
         
         if (!sourceCache.enroute[creep.name]) {
             sourceCache.enroute.push(creep.name);
