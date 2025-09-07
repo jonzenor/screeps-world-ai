@@ -495,7 +495,7 @@ module.exports = {
                 roomCache.needed.containers = 5;
                 roomCache.needed.extensions = 10;
                 roomCache.needed.towers = 1;
-                codex.manning.miner = {priority: 1, count: (roomCache.counts.containers + roomCache.counts.containerConstructions) };
+                codex.manning.miner = {priority: 1, count: 2 };
                 codex.manning.fastworker = {priority: 4, count: 3 };
                 codex.manning.worker = {priority: 5, count: 3 };
 
