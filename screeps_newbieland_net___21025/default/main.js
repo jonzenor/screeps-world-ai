@@ -7,6 +7,7 @@ var baseArchitect = require('base.architect');
 var baseManager = require('base.manager');
 var roomCacheUtility = require('room.cache');
 var hudOverlay = require('hud.overlay');
+var baseTower = require('base.tower');
 
 const WORKFORCE = { miner: 0, fastworker: 1, worker: 2, harvester: 0, upgrader: 0, builder: 0 };
 const CONSTRUCTION = { container: 0, extension: 0 }
@@ -25,6 +26,13 @@ module.exports.loop = function () {
         hudOverlay.render(thisRoom);
 
         taskManager.prepare(thisRoom);
+        
+        var towers = thisRoom.find(FIND_MY_STRUCTURES, { filter: {structureType: STRUCTURE_TOWER}});
+        for (var i in towers) {
+            var tower = towers[i];
+            
+            baseTower.run(tower);
+        }
       
         // Manage base by level
         const roomControllerLevel = thisRoom.controller.level || 0;
@@ -47,66 +55,11 @@ module.exports.loop = function () {
         var extensionsBuilt = thisRoom.find(FIND_STRUCTURES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
         var extensionsQueued = thisRoom.find(FIND_CONSTRUCTION_SITES, {filter: function(s){ return s.structureType === STRUCTURE_EXTENSION; }}).length;
         var extensionCount = extensionsBuilt + extensionsQueued;
-
-
-        if (roomControllerLevel == 2) {
-        //    console.log('Room level 2');
-            // The max number of containers that we want is one per energy source and one for the spawn
-            var sourceCount = thisRoom.find(FIND_SOURCES).length;
-            var containersAllowedThisLevel = (CONTROLLER_STRUCTURES[STRUCTURE_CONTAINER][roomController.level] || 0);
-            var extensionsAllowedThisLevel = (CONTROLLER_STRUCTURES[STRUCTURE_EXTENSION][roomController.level] || 0);
-            MAX_CONSTRUCTION_SITES = 1;
-            
-//            console.log('Room controller level: ' + roomController.level);
-//            console.log('extensions allowed: ' + extensionsAllowedThisLevel);
-            if (extensionCount < extensionsAllowedThisLevel) {
-                CONSTRUCTION.container = 1
-            } else {
-//                console.log('setting containers to max');
-//                CONSTRUCTION.container = Math.min(sourceCount +1, containersAllowedThisLevel);
-                CONSTRUCTION.container = Math.min(sourceCount, containersAllowedThisLevel);
-            }
-        }
         
         if (containerCount == CONSTRUCTION.container && extensionCount == CONSTRUCTION.extension) {
             MAX_CONSTRUCTION_SITES = 0;
         }
         
-        if (activeConstructions < MAX_CONSTRUCTION_SITES) {
-//            console.log('Open construction site, finding something to build');
-//            console.log('Containers:' + containerCount + '/' + CONSTRUCTION.container);
-//            console.log('Extensions:' + extensionCount + '/' + CONSTRUCTION.extension);
-            // Let's build something!
-            var newConstruction = null;
-
-            // if (!newConstruction && containerCount < CONSTRUCTION.container) {
-//                newConstruction = baseUtilities.autoPlanContainers(thisRoom);
-//                console.log('Started construction on container. Set newConstruction to: ' + newConstruction);
-            // }
-            
-            // if (!newConstruction && extensionCount < CONSTRUCTION.extension) {
-            //     baseUtilities.autoPlanExtensions(thisRoom);
-            //     console.log('Started construction on extension. Set newConstruction to: ' + newConstruction);
-            // }
-        }
-        
-        // Manage the worker Counts
-        // WORKFORCE.miner = containerCount;
-        // if (WORKFORCE.miner > 2) {
-        //     WORKFORCE.worker = 2;
-        // }
-        // const counts = _.countBy(_.filter(Game.creeps, c => c.room.name === thisRoom.name), c => c.memory.role);
-        // for (const role of Object.keys(WORKFORCE)) {
-        //     const need = WORKFORCE[role];
-        //     const have = counts[role] || 0;
-
-        //     if (thisRoom.energyAvailable < 200) break;
-            
-        //     if (have < need) {
-        //         //makeCreep.run(thisRoom, role);
-        //         break;
-        //     }
-        // }
     }
 
 

@@ -24,7 +24,15 @@ module.exports = {
             ) && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
         });
         
-        for (const s of fillers) tasks.push({ key: `fill:${s.id}`, type: `fill`, target: s.id, slots: 1, priority: 5});
+        for (const s of fillers) { 
+            var usePriority = 5;
+            var useSlots = 1;
+            if (s.structureType == STRUCTURE_TOWER) {
+                usePriority = 1;
+                useSlots = 2;
+            }
+            tasks.push({ key: `fill:${s.id}`, type: `fill`, target: s.id, slots: useSlots, priority: usePriority});
+        }
         
         // Defien construction sites
         const sites = room.find(FIND_CONSTRUCTION_SITES);
@@ -69,8 +77,10 @@ module.exports = {
         const tm = creep.room.memory.tm;
         
         if (!tm) return null;
+        var tasks = _.sortBy(tm.tasks, 'priority');
         
-        for (const task of tm.tasks) {
+        for (var i = 0; i < tasks.length; i++) {
+            var task = tasks[i];
             
             // See if this task has been taken yet
             const taken = tm.claims[task.key] || 0;
