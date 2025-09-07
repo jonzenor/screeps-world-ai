@@ -62,7 +62,6 @@ function cacheCreepCount(room, roomCache) {
             roomCache.creepsCount = (roomCache.creepsCount || 0) + 1;
         }
     }
-    
 }
 
 module.exports = {
@@ -89,12 +88,12 @@ module.exports = {
         var maxEnergy = room.energyCapacityAvailable;
         var energyAvailable = room.energyAvailable;
         
-        if (energyAvailable < maxEnergy) {
-            return;
-        }
         
         // Get the list of manning requirements
         var manning = Memory.rooms[room.name].architect.manning;
+        var workforceLevel = (roomCache.creepsCount / manning.total);
+        console.log('Workforce Level: ' + workforceLevel);
+
         var roles = Object.keys(manning);
         roles.sort(function(a, b) {
             return manning[a].priority - manning[b].priority;
@@ -106,12 +105,22 @@ module.exports = {
            var have = (roomCache.creepsByRole && roomCache.creepsByRole[roleName]) || 0;
            
            if (have < needed) {
+                var useEnergy = 250;
+                if (workforceLevel > 0.8) {
+                    useEnergy = maxEnergy;
+                } else if (workforceLevel > 0.5) {
+                    useEnergy = 550;
+                } else if (workforceLevel > 0.2) {
+                    useEnergy = 300;
+                } else {
+                    useEnergy = 250;
+                }
                 
-                var roleBody = buildBody(roleName, maxEnergy);
+                var roleBody = buildBody(roleName, useEnergy);
                 var name = roleName + '-' + Game.time;
                
                 var spawnResult = spawner.spawnCreep(roleBody, name, { memory: { role: roleName, roleType: BODY_BOOK[roleName].useRole } });
-                console.log('MANAGER: Requesting Spawn: ' + maxEnergy + ':' + roleName + ' Status: ' + spawnResult);
+                console.log('MANAGER: Requesting Spawn: ' + useEnergy + ':' + roleName + ' Status: ' + spawnResult);
                 return false;
             }
         });

@@ -27,6 +27,7 @@ function initBase(codex, room) {
         fastworker: { count: 1, priority: 1 },
         worker: { count: 2, priority: 5 },
         miner: { count: 0, priority: 10 },
+        total: 3,
     };
     
     codex.structures.mainSpawn = {};
@@ -487,18 +488,20 @@ module.exports = {
                 roomCache.needed.extensions = 5;
                 roomCache.needed.towers = 0;
                 
-                codex.manning.miner = {priority: 1, count: (roomCache.counts.containers + roomCache.counts.containerConstructions) };
-                codex.manning.fastworker = {priority: 4, count: 3 };
+                codex.manning.miner = {priority: 2, count: (roomCache.counts.containers + roomCache.counts.containerConstructions) };
+                codex.manning.fastworker = {priority: 1, count: 3 };
                 codex.manning.worker = {priority: 5, count: 3 };
+                codex.manning.total = 6 + codex.manning.miner.count;
             } else if (room.controller.level == 3) {
                 roomCache.needed.constructions = 2;
                 roomCache.needed.containers = 5;
                 roomCache.needed.extensions = 10;
                 roomCache.needed.towers = 1;
-                codex.manning.miner = {priority: 1, count: 2 };
-                codex.manning.fastworker = {priority: 4, count: 3 };
+                
+                codex.manning.miner = {priority: 2, count: 2 };
+                codex.manning.fastworker = {priority: 1, count: 3 };
                 codex.manning.worker = {priority: 5, count: 3 };
-
+                codex.manning.total = 8;
             }
         }
         
@@ -542,24 +545,41 @@ module.exports = {
         
         // Check on building progress
         var buildSites = _.chain(codex.plan)
-            .filter(function(p) { return p && p.state === 'building' && p.nextCheck <= Game.time})
+            .filter(function(p) { return p && p.status === 'building' && p.nextCheck <= Game.time})
             .value();
+        
+        if (Memory.debug['architect']) {
+            console.log('[DEBUG] ARCHITECT: Checking status on buildSites: ' + buildSites.length);
+        }
         
         if (buildSites && buildSites.length > 0) {
             _.forEach(buildSites, function(buildSite) {
                 var site = Game.getObjectById(buildSite.siteId);
+                
+                if (Memory.debug['architect']) {
+                    console.log('[DEBUG] ARCHITECT: Checking on site: ' + JSON.stringify(site));
+                }
                 
                 if (site) {
                     buildSite.lastProgress = (site.progress / site.progressTotal) || 0;
                     var checkDelay = (buildSite.lastProgress > 0.8) ? 10 : 50;
                     buildSite.nextCheck = Game.time + checkDelay;
                 } else {
-                    var newStructure = _.first(room.lookForAt(LOOK_STRUCTURES, x, y));
+                    if (Memory.debug['architect']) {
+                        console.log('[DEBUG] ARCHITECT: Construction site not found. Looking for structure');
+                    }
+                    
+                    var newStructure = _.first(room.lookForAt(LOOK_STRUCTURES, buildSite.x, buildSite.y));
+                    if (Memory.debug['architect']) {
+                        console.log('[DEBUG] ARCHITECT: Found at construction location: ' + JSON.stringify(newStructure));
+                    }
+                    
                     if (!newStructure) {
                         // Something failed, requeue
-                        buildSite.state = 'planned';
+                        buildSite.status = 'planned';
+                        
                     } else {
-                        buildSite.state = 'completed';
+                        buildSite.status = 'completed';
     
                         if (buildSite.type === STRUCTURE_CONTAINER) {
                             if (buildSite.sourceId) {

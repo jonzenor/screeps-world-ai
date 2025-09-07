@@ -30,7 +30,11 @@ module.exports = {
             if (s.structureType == STRUCTURE_TOWER) {
                 usePriority = 1;
                 useSlots = 2;
+            } else if (s.structureType == STRUCTURE_SPAWN) {
+                usePriority = 2;
+                useSlots = 2;
             }
+            
             tasks.push({ key: `fill:${s.id}`, type: `fill`, target: s.id, slots: useSlots, priority: usePriority});
         }
         
