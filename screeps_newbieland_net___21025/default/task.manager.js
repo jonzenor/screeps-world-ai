@@ -32,7 +32,7 @@ module.exports = {
                 useSlots = 2;
             } else if (s.structureType == STRUCTURE_SPAWN) {
                 usePriority = 2;
-                useSlots = 2;
+                useSlots = (s.energyAvailable >= 200) ? 1 : 2;
             }
             
             tasks.push({ key: `fill:${s.id}`, type: `fill`, target: s.id, slots: useSlots, priority: usePriority});
